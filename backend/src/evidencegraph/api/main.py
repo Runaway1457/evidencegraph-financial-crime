@@ -12,7 +12,6 @@ from evidencegraph.config import Settings, get_settings
 from evidencegraph.domain.errors import DomainError, NotFoundError
 from evidencegraph.infrastructure.database import build_engine, build_session_factory
 from evidencegraph.infrastructure.sqlalchemy_repository import SqlAlchemyCaseRepository
-from evidencegraph.infrastructure.tables import Base
 
 
 def create_app(
@@ -25,8 +24,6 @@ def create_app(
 
     if repository_override is None:
         engine = build_engine(settings)
-        if settings.environment != "production":
-            Base.metadata.create_all(engine)
         repository: CaseRepository = SqlAlchemyCaseRepository(build_session_factory(engine))
     else:
         repository = repository_override
