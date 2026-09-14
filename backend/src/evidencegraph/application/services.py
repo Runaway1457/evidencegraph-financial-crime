@@ -1,12 +1,13 @@
 from dataclasses import replace
 
+from evidencegraph.application.grounding import validate_agent_proposals
 from evidencegraph.application.ports import (
     AgentFindingProposal,
     CaseRepository,
     InvestigatorAgent,
     PolicyPort,
 )
-from evidencegraph.domain.errors import AuthorizationDeniedError, DomainError, NotFoundError
+from evidencegraph.domain.errors import AuthorizationDeniedError, NotFoundError
 from evidencegraph.domain.hashing import sha256_bytes
 from evidencegraph.domain.models import (
     Evidence,
@@ -95,7 +96,7 @@ class InvestigationService:
             raise AuthorizationDeniedError(decision.reason or "policy denied investigation")
 
         proposals = self._agent.propose(case)
-        self._validate_proposals(case, proposals)
+        validate_agent_proposals(case, proposals)
 
         existing_signatures = {
             (finding.title, finding.rationale, finding.evidence_ids) for finding in case.findings
@@ -155,19 +156,3 @@ class InvestigationService:
         if case is None:
             raise NotFoundError(f"case {case_id!r} was not found")
         return case
-
-    @staticmethod
-    def _validate_proposals(
-        case: InvestigationCase,
-        proposals: tuple[AgentFindingProposal, ...],
-    ) -> None:
-        known_evidence = {item.id for item in case.evidence}
-        for proposal in proposals:
-            if not proposal.title.strip() or not proposal.rationale.strip():
-                raise DomainError("agent proposals require title and rationale")
-            if not proposal.evidence_ids:
-                raise DomainError("agent proposals must cite evidence")
-            if missing := set(proposal.evidence_ids) - known_evidence:
-                raise DomainError(f"agent cited unknown evidence: {sorted(missing)}")
-            if not 0.0 <= proposal.confidence <= 1.0:
-                raise DomainError("agent confidence must be between 0 and 1")
