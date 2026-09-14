@@ -153,7 +153,7 @@ curl --fail   -H 'Content-Type: application/json'   -H 'X-Actor-ID: analyst_1'  
 Expected readiness response:
 
 ```json
-{"status":"ready","version":"0.1.0"}
+{"status":"ready","version":"0.2.0"}
 ```
 
 Stop and remove demo data:
