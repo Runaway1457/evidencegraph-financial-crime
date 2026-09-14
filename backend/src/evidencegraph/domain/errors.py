@@ -8,3 +8,7 @@ class NotFoundError(DomainError):
 
 class EvidenceIntegrityError(DomainError):
     """Evidence bytes or provenance do not match the ledger."""
+
+
+class AuthorizationDeniedError(DomainError):
+    """Policy denied an attempted action."""
