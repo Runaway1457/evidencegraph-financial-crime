@@ -166,9 +166,7 @@ class SqlAlchemyCaseRepository:
             .order_by(EvidenceTable.ingested_at)
         ).all()
         entity_rows = session.scalars(
-            select(EntityTable)
-            .where(EntityTable.case_id == row.id)
-            .order_by(EntityTable.id)
+            select(EntityTable).where(EntityTable.case_id == row.id).order_by(EntityTable.id)
         ).all()
         relationship_rows = session.scalars(
             select(RelationshipTable)
