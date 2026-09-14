@@ -5,12 +5,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import Engine, text
 
 from evidencegraph import __version__
-from evidencegraph.api.schemas import CaseResponse, CreateCaseRequest, HealthResponse
+from evidencegraph.api.schemas import (
+    CaseResponse,
+    CreateCaseRequest,
+    FindingResponse,
+    HealthResponse,
+    ReviewFindingRequest,
+)
 from evidencegraph.application.ports import CaseRepository
-from evidencegraph.application.services import CaseService
+from evidencegraph.application.services import CaseService, InvestigationService
 from evidencegraph.config import Settings, get_settings
-from evidencegraph.domain.errors import DomainError, NotFoundError
+from evidencegraph.domain.errors import AuthorizationDeniedError, DomainError, NotFoundError
 from evidencegraph.infrastructure.database import build_engine, build_session_factory
+from evidencegraph.infrastructure.deterministic_agent import DeterministicInvestigator
+from evidencegraph.infrastructure.policy import DevelopmentPolicy, OpaPolicyClient
 from evidencegraph.infrastructure.sqlalchemy_repository import SqlAlchemyCaseRepository
 
 
@@ -29,6 +37,8 @@ def create_app(
         repository = repository_override
 
     service = CaseService(repository)
+    policy = OpaPolicyClient(base_url=settings.opa_url) if settings.opa_url else DevelopmentPolicy()
+    investigation_service = InvestigationService(repository, DeterministicInvestigator(), policy)
     application = FastAPI(
         title="EvidenceGraph Financial Crime",
         version=__version__,
@@ -36,6 +46,7 @@ def create_app(
         redoc_url=None,
     )
     application.state.case_service = service
+    application.state.investigation_service = investigation_service
     application.state.engine = engine
     application.add_middleware(
         CORSMiddleware,
@@ -113,6 +124,72 @@ def create_app(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="case not found",
             ) from exc
+
+    @application.get(
+        f"{settings.api_prefix}/cases/{case_id}/findings",
+        response_model=list[FindingResponse],
+        tags=["investigations"],
+    )
+    def list_findings(case_id: str) -> list[FindingResponse]:
+        try:
+            case = service.get_case(case_id)
+        except NotFoundError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="case not found",
+            ) from exc
+        return [FindingResponse.from_domain(item) for item in case.findings]
+
+    @application.post(
+        f"{settings.api_prefix}/cases/{case_id}/investigations",
+        response_model=list[FindingResponse],
+        tags=["investigations"],
+    )
+    def run_investigation(
+        case_id: str,
+        actor: Annotated[str, Depends(actor_id)],
+    ) -> list[FindingResponse]:
+        try:
+            findings = investigation_service.run(case_id=case_id, actor_id=actor)
+        except AuthorizationDeniedError as exc:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="policy denied") from exc
+        except NotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="case not found") from exc
+        except DomainError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
+        return [FindingResponse.from_domain(item) for item in findings]
+
+    @application.post(
+        f"{settings.api_prefix}/cases/{case_id}/findings/{finding_id}/review",
+        response_model=FindingResponse,
+        tags=["investigations"],
+    )
+    def review_finding(
+        case_id: str,
+        finding_id: str,
+        payload: ReviewFindingRequest,
+        actor: Annotated[str, Depends(actor_id)],
+    ) -> FindingResponse:
+        try:
+            finding = investigation_service.review(
+                case_id=case_id,
+                finding_id=finding_id,
+                reviewer_id=actor,
+                decision=payload.decision,
+            )
+        except AuthorizationDeniedError as exc:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="policy denied") from exc
+        except NotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="finding not found") from exc
+        except DomainError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(exc),
+            ) from exc
+        return FindingResponse.from_domain(finding)
 
     return application
 
