@@ -204,9 +204,6 @@ export function App() {
   const [activeCaseId, setActiveCaseId] = useState("EG-2026-0147");
   const [commandOpen, setCommandOpen] = useState(false);
   const [runStatus, setRunStatus] = useState<RunStatus>("ready");
-  const selectedEdge = edges.find((edge) => edge.id === selectedEdgeId);
-
-  if (!selectedEdge) throw new Error(`Unknown selected relationship: ${selectedEdgeId}`);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -220,6 +217,9 @@ export function App() {
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
   }, []);
+
+  const selectedEdge = edges.find((edge) => edge.id === selectedEdgeId);
+  if (!selectedEdge) throw new Error(`Unknown selected relationship: ${selectedEdgeId}`);
 
   return (
     <div className="app-shell">
