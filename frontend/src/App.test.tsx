@@ -25,7 +25,8 @@ describe("investigation workspace", () => {
     expect(relationship).toHaveClass("selected");
     expect(screen.getByRole("heading", { name: "USDT 2.31M" })).toBeInTheDocument();
     expect(screen.getByText(/invoice amount and on-chain settlement/i)).toBeInTheDocument();
-    expect(screen.getByText("E-027")).toBeInTheDocument();
+    const inspector = screen.getByLabelText("Relationship evidence inspector");
+    expect(within(inspector).getByText("E-027")).toBeInTheDocument();
   });
 
   it("supports graph depth, view, and provenance controls", () => {
@@ -73,6 +74,9 @@ describe("investigation workspace", () => {
     fireEvent.click(screen.getByRole("button", { name: /EG-2026-0139 Northstar/i }));
 
     expect(screen.getByRole("heading", { name: "Northstar" })).toBeInTheDocument();
-    expect(screen.getByText("EG-2026-0139")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /EG-2026-0139 Northstar/i })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
   });
 });
