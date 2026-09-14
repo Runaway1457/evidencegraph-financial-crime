@@ -40,6 +40,20 @@ services:
     networks: [data]
     restart: "no"
 
+  seed:
+    build:
+      context: ..
+      dockerfile: deployment/docker/backend.Dockerfile
+    command: ["python", "scripts/seed_demo.py"]
+    environment:
+      EG_DATABASE_URL: postgresql+psycopg://evidencegraph:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/evidencegraph
+      EG_ENVIRONMENT: production
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [data]
+    restart: "no"
+
   api:
     build:
       context: ..
@@ -48,9 +62,10 @@ services:
       EG_DATABASE_URL: postgresql+psycopg://evidencegraph:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/evidencegraph
       EG_ENVIRONMENT: production
       EG_AUTH_MODE: development
+      EG_OPA_URL: http://opa:8181
       EG_CORS_ORIGINS: '["http://localhost:8080"]'
     depends_on:
-      migrate:
+      seed:
         condition: service_completed_successfully
       opa:
         condition: service_started
