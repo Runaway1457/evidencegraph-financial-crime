@@ -177,9 +177,7 @@ class InvestigationCase:
     findings: tuple[Finding, ...] = ()
 
     @classmethod
-    def create(
-        cls, *, title: str, description: str, created_by: str
-    ) -> "InvestigationCase":
+    def create(cls, *, title: str, description: str, created_by: str) -> "InvestigationCase":
         if not title.strip():
             raise DomainError("case title is required")
         return cls(
