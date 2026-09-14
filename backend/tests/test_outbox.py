@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
@@ -52,11 +52,14 @@ def test_run_and_outbox_message_commit_atomically() -> None:
 def test_outbox_leasing_success_retry_and_dead_letter() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)
-    clock = datetime(2026, 9, 14, tzinfo=UTC)
 
     with Session(engine) as session, session.begin():
         add_case(session)
         enqueue_investigation(session, case_id="case_1", actor_id="analyst_1")
+
+    # Advance beyond the generated available_at without coupling the test to
+    # wall-clock time or changing the dispatcher's production semantics.
+    clock = datetime.now(UTC) + timedelta(seconds=1)
 
     with Session(engine) as session, session.begin():
         leased = lease_pending(session, limit=10, lease_seconds=30, now=clock)
