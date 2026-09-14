@@ -8,7 +8,11 @@ from evidencegraph.infrastructure.memory import InMemoryCaseRepository
 
 def test_case_and_evidence_lifecycle() -> None:
     service = CaseService(InMemoryCaseRepository())
-    case = service.create_case(title="Project Meridian", description="Synthetic case", actor_id="a1")
+    case = service.create_case(
+        title="Project Meridian",
+        description="Synthetic case",
+        actor_id="a1",
+    )
 
     evidence = service.ingest_evidence(
         case_id=case.id,
