@@ -17,9 +17,7 @@ class DeterministicInvestigator:
                 if first.target_entity_id != second.source_entity_id or path_key in seen_paths:
                     continue
                 seen_paths.add(path_key)
-                evidence_ids = tuple(
-                    dict.fromkeys((*first.evidence_ids, *second.evidence_ids))
-                )
+                evidence_ids = tuple(dict.fromkeys((*first.evidence_ids, *second.evidence_ids)))
                 proposals.append(
                     AgentFindingProposal(
                         title="Multi-hop transfer path for review",
