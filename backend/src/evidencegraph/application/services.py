@@ -2,7 +2,6 @@ from dataclasses import replace
 
 from evidencegraph.application.grounding import validate_agent_proposals
 from evidencegraph.application.ports import (
-    AgentFindingProposal,
     CaseRepository,
     InvestigatorAgent,
     PolicyPort,
