@@ -28,8 +28,10 @@ Every material claim must resolve to immutable evidence and provenance. AI may p
 - OpenTelemetry/Langfuse-compatible observability and reproducible AI evaluations
 - Docker Compose for demonstration and Kubernetes/Helm for deployment
 
+## Portfolio-quality documentation
+
+The final README is a release deliverable, not a placeholder. It will include verified screenshots, an investigation walkthrough, system and trust-boundary diagrams, reproducible benchmarks/evals, test evidence, security posture, deployment modes, and engineering trade-offs.
+
 ## Security posture
 
 This repository uses synthetic data only. It is designed to demonstrate architecture and engineering controls; it is not a certified AML decision system and must not be deployed against real financial data without institution-specific validation, legal review, model-risk governance, and operational hardening.
-
-Detailed architecture, threat model, ADRs, test strategy, model card, data card, SLOs, and runbooks are being committed with the implementation.
