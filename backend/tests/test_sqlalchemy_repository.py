@@ -99,7 +99,9 @@ def test_repository_save_updates_existing_aggregate() -> None:
     case = InvestigationCase.create(title="Meridian", description="", created_by="analyst_1")
     store.save(case)
 
-    under_review = replace(case, status=FindingStatus.PROPOSED.value)
-    # CaseStatus is a StrEnum; invalid persisted values must never be accepted by hydration.
-    store.save(replace(under_review, status=case.status))
-    assert store.get(case.id) is not None
+    updated = replace(case, description="Updated by an investigator")
+    store.save(updated)
+
+    loaded = store.get(case.id)
+    assert loaded is not None
+    assert loaded.description == "Updated by an investigator"
