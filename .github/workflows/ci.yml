@@ -20,8 +20,8 @@ jobs:
     env:
       EG_DATABASE_URL: sqlite+pysqlite:///./migration-smoke.db
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -55,8 +55,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
@@ -105,7 +105,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: open-policy-agent/setup-opa@v2
         with:
           version: latest
@@ -118,18 +118,19 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Validate Compose model
         run: docker compose -f deployment/compose.yaml config --quiet
       - name: Build and start the stack
         run: |
           cleanup() {
             status=$?
+            trap - EXIT
             if [ "$status" -ne 0 ]; then
               docker compose -f deployment/compose.yaml ps || true
               docker compose -f deployment/compose.yaml logs || true
             fi
-            docker compose -f deployment/compose.yaml down --volumes
+            docker compose -f deployment/compose.yaml down --volumes || true
             exit "$status"
           }
           trap cleanup EXIT
