@@ -33,13 +33,20 @@ jobs:
         run: mypy
       - name: Tests
         run: pytest --cov-report=xml
+      - name: Grounding evals
+        run: >-
+          python scripts/run_grounding_evals.py
+          --dataset evals/grounding_cases.jsonl
+          --report eval-results.json
       - name: Migration smoke and drift check
         run: alembic upgrade head && alembic check
-      - name: Upload coverage
+      - name: Upload quality evidence
         uses: actions/upload-artifact@v4
         with:
-          name: backend-coverage
-          path: coverage.xml
+          name: backend-quality
+          path: |
+            coverage.xml
+            eval-results.json
 
   frontend:
     runs-on: ubuntu-24.04
