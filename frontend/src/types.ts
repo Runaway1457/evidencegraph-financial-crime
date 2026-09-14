@@ -23,6 +23,9 @@ export interface GraphEdge {
   label: string;
   detail?: string;
   suspicious?: boolean;
+  confidence: number;
+  evidenceIds: string[];
+  rationale: string;
 }
 
 export interface EvidenceItem {
@@ -32,6 +35,8 @@ export interface EvidenceItem {
   date: string;
   hash: string;
   locator: string;
+  kind: "transaction" | "document" | "registry" | "blockchain";
+  verifiedBy: string;
 }
 
 export interface TimelineEvent {
