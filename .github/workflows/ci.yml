@@ -66,11 +66,32 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      - name: Capture verified UI
+        run: |
+          mkdir -p ../docs/assets
+          python3 -m http.server 4173 --directory dist > /tmp/evidencegraph-ui.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in {1..20}; do
+            curl --fail --silent http://127.0.0.1:4173 > /dev/null && break
+            sleep 0.5
+          done
+          google-chrome --headless --no-sandbox --hide-scrollbars \
+            --window-size=1920,1080 \
+            --screenshot=../docs/assets/investigation-workbench.png \
+            http://127.0.0.1:4173
+          test -s ../docs/assets/investigation-workbench.png
       - name: Upload production bundle
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
           path: frontend/dist
+          if-no-files-found: error
+      - name: Upload verified UI
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-ui
+          path: docs/assets/investigation-workbench.png
           if-no-files-found: error
 
   policy:
