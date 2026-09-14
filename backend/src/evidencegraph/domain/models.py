@@ -202,3 +202,13 @@ class InvestigationCase:
         if any(existing.id == item.id for existing in self.evidence):
             raise DomainError("evidence id already exists")
         return replace(self, evidence=(*self.evidence, item))
+
+    def add_finding(self, item: Finding) -> "InvestigationCase":
+        if item.case_id != self.id:
+            raise DomainError("finding belongs to another case")
+        if any(existing.id == item.id for existing in self.findings):
+            raise DomainError("finding id already exists")
+        known_evidence = {evidence.id for evidence in self.evidence}
+        if missing := set(item.evidence_ids) - known_evidence:
+            raise DomainError(f"finding cites unknown evidence: {sorted(missing)}")
+        return replace(self, findings=(*self.findings, item))
