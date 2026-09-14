@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from typing import Any
 
 from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
@@ -16,7 +17,7 @@ def build_engine(settings: Settings) -> Engine:
 
         @event.listens_for(engine, "connect")
         def enable_sqlite_foreign_keys(
-            dbapi_connection: object,
+            dbapi_connection: Any,
             connection_record: object,
         ) -> None:
             del connection_record
