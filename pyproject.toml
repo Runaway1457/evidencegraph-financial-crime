@@ -4,18 +4,21 @@ build-backend = "hatchling.build"
 
 [project]
 name = "evidencegraph-financial-crime"
-version = "0.1.0"
+version = "0.2.0"
 description = "Evidence-first financial-crime investigation platform"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Gabriel" }]
 dependencies = [
+  "alembic>=1.16,<2",
   "fastapi>=0.116,<1",
+  "psycopg[binary]>=3.2,<4",
   "pydantic>=2.11,<3",
   "pydantic-settings>=2.10,<3",
-  "uvicorn[standard]>=0.35,<1",
+  "sqlalchemy>=2.0.43,<3",
   "structlog>=25.4,<26",
+  "uvicorn[standard]>=0.35,<1",
 ]
 
 [project.optional-dependencies]
@@ -48,3 +51,4 @@ python_version = "3.12"
 strict = true
 mypy_path = "backend/src"
 packages = ["evidencegraph"]
+plugins = ["sqlalchemy.ext.mypy.plugin"]
