@@ -8,9 +8,7 @@ class CaseService:
     def __init__(self, repository: CaseRepository) -> None:
         self._repository = repository
 
-    def create_case(
-        self, *, title: str, description: str, actor_id: str
-    ) -> InvestigationCase:
+    def create_case(self, *, title: str, description: str, actor_id: str) -> InvestigationCase:
         case = InvestigationCase.create(
             title=title,
             description=description,
