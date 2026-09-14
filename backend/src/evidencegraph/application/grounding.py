@@ -14,6 +14,8 @@ def validate_proposal(
         raise DomainError("agent proposals require title and rationale")
     if not proposal.evidence_ids:
         raise DomainError("agent proposals must cite evidence")
+    if len(set(proposal.evidence_ids)) != len(proposal.evidence_ids):
+        raise DomainError("agent proposal contains duplicate evidence citations")
     if missing := set(proposal.evidence_ids) - set(known_evidence):
         raise DomainError(f"agent cited unknown evidence: {sorted(missing)}")
     if not 0.0 <= proposal.confidence <= 1.0:
