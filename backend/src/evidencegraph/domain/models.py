@@ -57,6 +57,8 @@ class Evidence:
     source: str
     content_sha256: str
     storage_key: str
+    media_type: str
+    size_bytes: int
     ingested_by: str
     ingested_at: datetime
     page: int | None = None
@@ -66,6 +68,8 @@ class Evidence:
         _require_sha256(self.content_sha256)
         if not self.source.strip() or not self.storage_key.strip():
             raise DomainError("evidence source and storage_key are required")
+        if not self.media_type.strip() or self.size_bytes < 0:
+            raise DomainError("evidence media_type and non-negative size_bytes are required")
         if self.page is not None and self.page < 1:
             raise DomainError("page must be greater than zero")
 
@@ -79,6 +83,8 @@ class Evidence:
         content_sha256: str,
         storage_key: str,
         ingested_by: str,
+        media_type: str = "application/octet-stream",
+        size_bytes: int = 0,
         page: int | None = None,
         bounding_box: tuple[float, float, float, float] | None = None,
     ) -> "Evidence":
@@ -89,6 +95,8 @@ class Evidence:
             source=source,
             content_sha256=content_sha256,
             storage_key=storage_key,
+            media_type=media_type,
+            size_bytes=size_bytes,
             ingested_by=ingested_by,
             ingested_at=utc_now(),
             page=page,
