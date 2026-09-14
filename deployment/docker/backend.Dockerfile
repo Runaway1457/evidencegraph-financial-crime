@@ -24,6 +24,7 @@ WORKDIR /app
 COPY --from=builder /opt/evidencegraph /opt/evidencegraph
 COPY alembic.ini ./
 COPY backend/migrations ./backend/migrations
+COPY scripts ./scripts
 
 USER 10001:10001
 EXPOSE 8000
