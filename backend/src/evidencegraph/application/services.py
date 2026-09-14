@@ -35,6 +35,7 @@ class CaseService:
         source: str,
         storage_key: str,
         actor_id: str,
+        media_type: str = "application/octet-stream",
         page: int | None = None,
         bounding_box: tuple[float, float, float, float] | None = None,
     ) -> Evidence:
@@ -46,6 +47,8 @@ class CaseService:
             content_sha256=sha256_bytes(content),
             storage_key=storage_key,
             ingested_by=actor_id,
+            media_type=media_type,
+            size_bytes=len(content),
             page=page,
             bounding_box=bounding_box,
         )
