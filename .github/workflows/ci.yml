@@ -111,3 +111,30 @@ jobs:
           version: latest
       - name: Test authorization policies
         run: opa test policies --format=pretty
+
+
+  stack-smoke:
+    needs: [backend, frontend, policy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose model
+        run: docker compose -f deployment/compose.yaml config --quiet
+      - name: Build and start the stack
+        run: |
+          trap 'docker compose -f deployment/compose.yaml down --volumes' EXIT
+          docker compose -f deployment/compose.yaml up --detach --build web
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:8080/health/ready > /dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 60 ]; then
+              docker compose -f deployment/compose.yaml ps
+              docker compose -f deployment/compose.yaml logs
+              exit 1
+            fi
+            sleep 2
+          done
+          curl --fail --silent http://127.0.0.1:8080/ | grep --quiet "EvidenceGraph"
+          docker compose -f deployment/compose.yaml ps
