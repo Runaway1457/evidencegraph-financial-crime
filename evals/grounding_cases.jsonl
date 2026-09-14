@@ -1,0 +1,10 @@
+{"id":"valid-single-citation","known_evidence":["ev_1"],"title":"Rapid transfer","rationale":"One verified record supports this hypothesis.","evidence_ids":["ev_1"],"confidence":0.81,"expected_accept":true}
+{"id":"valid-multi-citation","known_evidence":["ev_1","ev_2","ev_3"],"title":"Layering path","rationale":"Three sources support a two-hop path.","evidence_ids":["ev_1","ev_3"],"confidence":0.94,"expected_accept":true}
+{"id":"unknown-citation","known_evidence":["ev_1"],"title":"Fabricated source","rationale":"This citation does not exist.","evidence_ids":["ev_404"],"confidence":0.99,"expected_accept":false}
+{"id":"mixed-valid-and-unknown","known_evidence":["ev_1"],"title":"Mixed citations","rationale":"One citation is fabricated.","evidence_ids":["ev_1","ev_404"],"confidence":0.72,"expected_accept":false}
+{"id":"no-citations","known_evidence":["ev_1"],"title":"Unsupported claim","rationale":"No supporting source is supplied.","evidence_ids":[],"confidence":0.61,"expected_accept":false}
+{"id":"blank-title","known_evidence":["ev_1"],"title":"   ","rationale":"A rationale alone is insufficient.","evidence_ids":["ev_1"],"confidence":0.5,"expected_accept":false}
+{"id":"blank-rationale","known_evidence":["ev_1"],"title":"Missing rationale","rationale":" ","evidence_ids":["ev_1"],"confidence":0.5,"expected_accept":false}
+{"id":"confidence-overflow","known_evidence":["ev_1"],"title":"Overconfident","rationale":"Confidence exceeds the contract.","evidence_ids":["ev_1"],"confidence":1.01,"expected_accept":false}
+{"id":"confidence-underflow","known_evidence":["ev_1"],"title":"Invalid confidence","rationale":"Confidence is negative.","evidence_ids":["ev_1"],"confidence":-0.01,"expected_accept":false}
+{"id":"duplicate-citation","known_evidence":["ev_1"],"title":"Duplicate citation","rationale":"The same evidence cannot inflate support.","evidence_ids":["ev_1","ev_1"],"confidence":0.77,"expected_accept":false}
