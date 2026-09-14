@@ -36,7 +36,9 @@ def test_opa_allow_decision_preserves_obligations() -> None:
 def test_opa_denial_and_malformed_documents_fail_closed() -> None:
     denied = OpaPolicyClient(
         base_url="http://opa:8181",
-        client=client_with(httpx.Response(200, json={"result": {"allow": False, "reason": "denied"}})),
+        client=client_with(
+            httpx.Response(200, json={"result": {"allow": False, "reason": "denied"}})
+        ),
     )
     malformed = OpaPolicyClient(
         base_url="http://opa:8181",
