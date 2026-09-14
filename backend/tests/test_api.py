@@ -4,7 +4,7 @@ from evidencegraph.api.main import app, repository
 
 
 def setup_function() -> None:
-    repository._cases.clear()  # noqa: SLF001 - isolated in-memory test adapter
+    repository._cases.clear()
 
 
 def test_health() -> None:
