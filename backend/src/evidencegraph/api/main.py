@@ -64,7 +64,10 @@ def create_case(
             actor_id=actor,
         )
     except DomainError as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
     return CaseResponse.from_domain(case)
 
 
