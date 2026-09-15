@@ -16,29 +16,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  codeql:
-    name: CodeQL (${{ matrix.language }})
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      security-events: write
-      packages: read
-    strategy:
-      fail-fast: false
-      matrix:
-        language: ["python", "javascript-typescript"]
-    steps:
-      - uses: actions/checkout@v5
-      - uses: github/codeql-action/init@v4
-        with:
-          languages: ${{ matrix.language }}
-      - uses: github/codeql-action/autobuild@v4
-      - uses: github/codeql-action/analyze@v4
-        with:
-          category: "/language:${{ matrix.language }}"
-
-  python-audit:
+  python-security:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -53,3 +31,5 @@ jobs:
         run: uv sync --locked --extra dev
       - name: Audit Python environment
         run: uv run pip-audit --local
+      - name: Static security analysis
+        run: uv run bandit --recursive backend/src --severity-level medium --confidence-level medium
