@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1050" viewBox="0 0 1600 1050" role="img" aria-labelledby="title desc">
+  <title id="title">EvidenceGraph system architecture</title><desc id="desc">Layered architecture showing user experience, application trust boundary, governed agent runtime, infrastructure and system of record.</desc>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07111c"/><stop offset="1" stop-color="#0d1c29"/></linearGradient><filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-opacity=".28"/></filter><marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0L9 3 0 6z" fill="#4acff2"/></marker><style>text{font-family:Inter,Segoe UI,Arial,sans-serif}.label{fill:#eaf6ff;font-weight:700}.meta{fill:#8ca3b7}.zone{fill:#42d8ff;font-size:15px;font-weight:700;letter-spacing:2px}.line{stroke:#4acff2;stroke-width:3;fill:none;marker-end:url(#arrow)}.dash{stroke:#476377;stroke-width:2;fill:none;stroke-dasharray:8 8}</style></defs>
+  <rect width="1600" height="1050" rx="28" fill="url(#bg)"/>
+  <text x="70" y="74" class="label" font-size="38">System architecture &amp; trust boundaries</text><text x="70" y="108" class="meta" font-size="18">The model proposes. Deterministic software, policy and independent review decide.</text>
+  <g filter="url(#shadow)">
+    <rect x="70" y="150" width="1460" height="130" rx="20" fill="#0c1f2d" stroke="#27475c"/><text x="98" y="181" class="zone">EXPERIENCE PLANE</text>
+    <g transform="translate(112 199)"><rect width="320" height="58" rx="12" fill="#112d3d" stroke="#42d8ff"/><text x="160" y="36" class="label" font-size="18" text-anchor="middle">React forensic workbench</text></g>
+    <g transform="translate(506 199)"><rect width="260" height="58" rx="12" fill="#112d3d" stroke="#42d8ff"/><text x="130" y="36" class="label" font-size="18" text-anchor="middle">FastAPI control plane</text></g>
+    <g transform="translate(840 199)"><rect width="290" height="58" rx="12" fill="#112d3d" stroke="#42d8ff"/><text x="145" y="36" class="label" font-size="18" text-anchor="middle">Actor identity context</text></g>
+    <g transform="translate(1204 199)"><rect width="280" height="58" rx="12" fill="#112d3d" stroke="#42d8ff"/><text x="140" y="36" class="label" font-size="18" text-anchor="middle">Health &amp; CI evidence</text></g>
+
+    <rect x="70" y="310" width="1460" height="230" rx="20" fill="#0b1b27" stroke="#36e6af" stroke-width="2"/><text x="98" y="343" fill="#36e6af" font-size="15" font-weight="700" letter-spacing="2">APPLICATION TRUST BOUNDARY</text>
+    <g transform="translate(112 378)"><rect width="280" height="108" rx="14" fill="#102736" stroke="#36e6af"/><text x="140" y="42" class="label" font-size="20" text-anchor="middle">Case aggregate</text><text x="140" y="72" class="meta" font-size="15" text-anchor="middle">ownership · state · invariants</text></g>
+    <g transform="translate(438 378)"><rect width="280" height="108" rx="14" fill="#102736" stroke="#36e6af"/><text x="140" y="42" class="label" font-size="20" text-anchor="middle">Graph traversal</text><text x="140" y="72" class="meta" font-size="15" text-anchor="middle">case-local · multi-hop · cited</text></g>
+    <g transform="translate(764 378)"><rect width="280" height="108" rx="14" fill="#102736" stroke="#36e6af"/><text x="140" y="42" class="label" font-size="20" text-anchor="middle">Grounding gate</text><text x="140" y="72" class="meta" font-size="15" text-anchor="middle">schema · citations · confidence</text></g>
+    <g transform="translate(1090 378)"><rect width="348" height="108" rx="14" fill="#102736" stroke="#36e6af"/><text x="174" y="42" class="label" font-size="20" text-anchor="middle">Four-eyes review</text><text x="174" y="72" class="meta" font-size="15" text-anchor="middle">independent identity · explicit decision</text></g>
+
+    <rect x="70" y="570" width="910" height="250" rx="20" fill="#0d1c2a" stroke="#9c82ff"/><text x="98" y="603" fill="#a88bfa" font-size="15" font-weight="700" letter-spacing="2">GOVERNED AI RUNTIME</text>
+    <g transform="translate(112 646)"><rect width="242" height="110" rx="14" fill="#171d35" stroke="#a88bfa"/><text x="121" y="42" class="label" font-size="19" text-anchor="middle">Deterministic baseline</text><text x="121" y="72" class="meta" font-size="14" text-anchor="middle">reproducible detectors</text></g>
+    <g transform="translate(390 646)"><rect width="242" height="110" rx="14" fill="#171d35" stroke="#a88bfa"/><text x="121" y="42" class="label" font-size="19" text-anchor="middle">Agent adapter</text><text x="121" y="72" class="meta" font-size="14" text-anchor="middle">structured, untrusted output</text></g>
+    <g transform="translate(668 646)"><rect width="260" height="110" rx="14" fill="#171d35" stroke="#a88bfa"/><text x="130" y="42" class="label" font-size="19" text-anchor="middle">OPA policy decision</text><text x="130" y="72" class="meta" font-size="14" text-anchor="middle">role · case · obligation</text></g>
+
+    <rect x="1010" y="570" width="520" height="250" rx="20" fill="#0d1c2a" stroke="#ffb44c"/><text x="1038" y="603" fill="#ffb44c" font-size="15" font-weight="700" letter-spacing="2">RELIABILITY PLANE</text>
+    <g transform="translate(1052 646)"><rect width="198" height="110" rx="14" fill="#2a2117" stroke="#ffb44c"/><text x="99" y="42" class="label" font-size="19" text-anchor="middle">Outbox</text><text x="99" y="72" class="meta" font-size="14" text-anchor="middle">atomic intent</text></g>
+    <g transform="translate(1284 646)"><rect width="198" height="110" rx="14" fill="#2a2117" stroke="#ffb44c"/><text x="99" y="42" class="label" font-size="19" text-anchor="middle">Dispatcher</text><text x="99" y="72" class="meta" font-size="14" text-anchor="middle">lease · retry · DLQ</text></g>
+
+    <rect x="70" y="850" width="1460" height="140" rx="20" fill="#0a1823" stroke="#ff667a"/><text x="98" y="883" fill="#ff667a" font-size="15" font-weight="700" letter-spacing="2">SYSTEM OF RECORD</text>
+    <g transform="translate(112 910)"><rect width="370" height="54" rx="12" fill="#281824" stroke="#ff667a"/><text x="185" y="34" class="label" font-size="18" text-anchor="middle">PostgreSQL 17 + composite FKs</text></g>
+    <g transform="translate(520 910)"><rect width="370" height="54" rx="12" fill="#281824" stroke="#ff667a"/><text x="185" y="34" class="label" font-size="18" text-anchor="middle">Evidence &amp; custody hash chains</text></g>
+    <g transform="translate(928 910)"><rect width="270" height="54" rx="12" fill="#281824" stroke="#ff667a"/><text x="135" y="34" class="label" font-size="18" text-anchor="middle">Audit ledger</text></g>
+    <g transform="translate(1236 910)"><rect width="246" height="54" rx="12" fill="#281824" stroke="#ff667a"/><text x="123" y="34" class="label" font-size="18" text-anchor="middle">Alembic migrations</text></g>
+  </g>
+  <path d="M432 228H494M766 228H828M1130 228H1192" class="line"/>
+  <path d="M636 280V356M252 486V548M578 486V548M904 486V548M1264 486V548M1151 756V830M1383 756V830" class="line"/>
+  <path d="M392 432H426M718 432H752M1044 432H1078" class="line"/>
+  <path d="M354 701H378M632 701H656M928 701H998" class="line"/>
+  <path d="M252 820V838H297V898M578 820V838H705V898M904 820V838H1063V898" class="dash"/>
+</svg>
