@@ -8,7 +8,7 @@
 
 **Raciocínio em grafos · proveniência imutável · IA governada · responsabilização humana**
 
-[README internacional](README.md) · [Arquitetura](docs/architecture.md) · [Executar](#executar-o-stack-verificado) · [Qualidade](#evidências-de-qualidade)
+[README internacional](README.md) · [Arquitetura](docs/architecture.md) · [Executar](#executar-o-stack-verificado) · [Qualidade](#evidências-de-qualidade) · [Engineering Hub](https://gabriel-engineering-hub.nagatoimoveis.chatgpt.site)
 
 </div>
 
@@ -99,5 +99,7 @@ Abra [http://localhost:8080](http://localhost:8080).
 **Gabriel Borges**
 
 AI Engineering · Knowledge Systems · Decision Infrastructure
+
+[Engineering Hub](https://gabriel-engineering-hub.nagatoimoveis.chatgpt.site) · [GitHub](https://github.com/Runaway1457)
 
 </div>

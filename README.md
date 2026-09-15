@@ -17,7 +17,7 @@
 ![Grounding](https://img.shields.io/badge/grounding_evals-10%2F10-21c997)
 ![License](https://img.shields.io/badge/license-Apache--2.0-42d8ff)
 
-[Product tour](#product-tour) · [Trust model](#trust-model) · [Architecture](#architecture) · [Run locally](#run-the-verified-stack) · [Quality proof](#quality-proof) · [Engineering record](#engineering-record)
+[Product tour](#product-tour) · [Trust model](#trust-model) · [Architecture](#architecture) · [Run locally](#run-the-verified-stack) · [Quality proof](#quality-proof) · [Engineering Hub](https://gabriel-engineering-hub.nagatoimoveis.chatgpt.site)
 
 </div>
 
@@ -320,5 +320,7 @@ Licensed under [Apache 2.0](LICENSE).
 **Gabriel Borges**
 
 AI Engineering · Knowledge Systems · Decision Infrastructure
+
+[Engineering Hub](https://gabriel-engineering-hub.nagatoimoveis.chatgpt.site) · [GitHub](https://github.com/Runaway1457)
 
 </div>
