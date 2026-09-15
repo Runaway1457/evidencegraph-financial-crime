@@ -8,7 +8,7 @@ The GitHub repository sidebar is metadata, not README content. Configure the **A
 
 **Website**
 
-Use the published Engineering Hub URL when available.
+`https://gabriel-engineering-hub.nagatoimoveis.chatgpt.site`
 
 **Topics**
 
