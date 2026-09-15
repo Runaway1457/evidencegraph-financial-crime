@@ -1,4 +1,4 @@
-FROM python:3.12.14-slim-bookworm AS builder
+FROM python:3.14.7-slim-bookworm AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:0.12.11 /uv /uvx /bin/
 
@@ -11,7 +11,7 @@ COPY pyproject.toml uv.lock README.md ./
 COPY backend ./backend
 RUN uv sync --locked --no-dev --no-editable
 
-FROM python:3.12.14-slim-bookworm AS runtime
+FROM python:3.14.7-slim-bookworm AS runtime
 
 ENV VIRTUAL_ENV=/opt/evidencegraph \
     PATH="/opt/evidencegraph/bin:$PATH" \
