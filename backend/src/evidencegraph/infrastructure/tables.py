@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from sqlalchemy import (
+    DDL,
     JSON,
     CheckConstraint,
     DateTime,
@@ -12,6 +13,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    event,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -35,8 +37,12 @@ class CaseTable(Base):
     created_by: Mapped[str] = mapped_column(String(128), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    __table_args__ = (CheckConstraint("risk_score BETWEEN 0 AND 100", name="ck_case_risk"),)
+    __table_args__ = (
+        CheckConstraint("risk_score BETWEEN 0 AND 100", name="ck_case_risk"),
+        CheckConstraint("version >= 0", name="ck_case_version"),
+    )
 
 
 class EvidenceTable(Base):
@@ -62,6 +68,7 @@ class EvidenceTable(Base):
     __table_args__ = (
         UniqueConstraint("case_id", "id", name="uq_evidence_case_id"),
         CheckConstraint("length(content_sha256) = 64", name="ck_evidence_sha256_length"),
+        CheckConstraint("content_sha256 = lower(content_sha256)", name="ck_evidence_sha256_lower"),
         CheckConstraint("size_bytes >= 0", name="ck_evidence_size"),
     )
 
@@ -156,13 +163,17 @@ class FindingTable(Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="proposed")
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     proposed_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    generated_by: Mapped[str] = mapped_column(String(128), nullable=False)
+    signature_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     proposed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     reviewed_by: Mapped[str | None] = mapped_column(String(128))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("case_id", "id", name="uq_finding_case_id"),
+        UniqueConstraint("case_id", "signature_sha256", name="uq_finding_case_signature"),
         CheckConstraint("confidence BETWEEN 0 AND 1", name="ck_finding_confidence"),
+        CheckConstraint("length(signature_sha256) = 64", name="ck_finding_signature_length"),
         CheckConstraint(
             "reviewed_by IS NULL OR reviewed_by <> proposed_by",
             name="ck_finding_four_eyes",
@@ -272,3 +283,48 @@ class WorkflowOutboxTable(Base):
         CheckConstraint("attempts >= 0", name="ck_outbox_attempts"),
         Index("ix_outbox_dispatch", "status", "available_at"),
     )
+
+
+def _reject_ledger_mutation(*_: object) -> None:
+    raise RuntimeError("tamper-evident ledger rows are append-only")
+
+
+event.listen(AuditEventTable, "before_update", _reject_ledger_mutation)
+event.listen(AuditEventTable, "before_delete", _reject_ledger_mutation)
+event.listen(ChainOfCustodyTable, "before_update", _reject_ledger_mutation)
+event.listen(ChainOfCustodyTable, "before_delete", _reject_ledger_mutation)
+
+event.listen(
+    AuditEventTable.__table__,
+    "after_create",
+    DDL(  # type: ignore[no-untyped-call]
+        """
+        CREATE OR REPLACE FUNCTION evidencegraph_reject_ledger_mutation()
+        RETURNS trigger AS $fn$
+        BEGIN
+          RAISE EXCEPTION 'tamper-evident ledger rows are append-only';
+        END;
+        $fn$ LANGUAGE plpgsql;
+        CREATE TRIGGER audit_events_append_only
+        BEFORE UPDATE OR DELETE ON audit_events
+        FOR EACH ROW EXECUTE FUNCTION evidencegraph_reject_ledger_mutation();
+        """
+    ).execute_if(dialect="postgresql"),
+)
+event.listen(
+    ChainOfCustodyTable.__table__,
+    "after_create",
+    DDL(  # type: ignore[no-untyped-call]
+        """
+        CREATE OR REPLACE FUNCTION evidencegraph_reject_ledger_mutation()
+        RETURNS trigger AS $fn$
+        BEGIN
+          RAISE EXCEPTION 'tamper-evident ledger rows are append-only';
+        END;
+        $fn$ LANGUAGE plpgsql;
+        CREATE TRIGGER chain_of_custody_append_only
+        BEFORE UPDATE OR DELETE ON chain_of_custody
+        FOR EACH ROW EXECUTE FUNCTION evidencegraph_reject_ledger_mutation();
+        """
+    ).execute_if(dialect="postgresql"),
+)

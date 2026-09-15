@@ -13,7 +13,7 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=07111c)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)
 ![OPA](https://img.shields.io/badge/Policy-OPA-7D5AE6)
-![Coverage](https://img.shields.io/badge/branch_coverage-90.76%25-21c997)
+![Coverage](https://img.shields.io/badge/branch_coverage-84.63%25-21c997)
 ![Grounding](https://img.shields.io/badge/grounding_evals-10%2F10-21c997)
 ![License](https://img.shields.io/badge/license-Apache--2.0-42d8ff)
 
@@ -39,8 +39,8 @@ Most AI investigation demos optimize for a fluent answer. A serious financial-cr
 | How were two entities connected? | The graph returns the cited relationship path, not only an explanation. |
 | Can the model invent a citation? | A fail-closed grounding gate rejects unknown, duplicate or cross-case evidence. |
 | Who authorized the action? | OPA evaluates actor, action, case and obligations. |
-| Can an investigator approve their own proposal? | The four-eyes invariant blocks self-review in the domain model. |
-| What happens after a retry? | Finding signatures and an outbox-backed execution model preserve idempotency. |
+| Can an investigator approve their own request? | The finding records both human requester and generating agent; the domain and database block the requester from reviewing it. |
+| What happens after a retry? | A case-local signature constraint and outbox worker make repeated delivery observable and idempotent. |
 
 ## Product tour
 
@@ -93,7 +93,8 @@ Every proposal is rejected unless all conditions hold:
 3. duplicate citations are removed or rejected;
 4. confidence is bounded to `[0, 1]`;
 5. the full proposal batch validates before persistence;
-6. the reviewer is not the proposer.
+6. the reviewer is not the human who requested the investigation;
+7. a resolved finding cannot be reviewed again.
 
 The model is therefore **not** the system of record. Agent output crosses a trust boundary as untrusted structured input.
 
@@ -148,7 +149,7 @@ The run request and its workflow intent are stored in one database transaction. 
 
 ## Implementation status
 
-Senior engineering means distinguishing implemented controls from planned integrations.
+Engineering review depends on distinguishing implemented controls from planned integrations.
 
 | Capability | Current reference implementation | Extension boundary |
 |---|---|---|
@@ -156,10 +157,10 @@ Senior engineering means distinguishing implemented controls from planned integr
 | Graph | Case-local multi-hop traversal with evidence-backed edges | OpenSPG/KAG or another graph backend |
 | Policy | OPA/Rego authorization with fail-closed client behavior | Enterprise policy bundle and identity claims |
 | Persistence | PostgreSQL 17, SQLAlchemy 2 and explicit Alembic migration | Managed PostgreSQL and encrypted backups |
-| Reliability | Transactional outbox primitives, leases, retry and dead-letter state | Temporal or another durable workflow runtime |
-| Identity | Explicit actor context; development header in the demo profile | Institution-owned OIDC/JWT validation |
-| Documents | Evidence metadata, digests and custody model | S3, malware scanning, OCR and PII redaction |
-| Experience | Production-built React workbench with deterministic fixture | Live workspace binding to the FastAPI control plane |
+| Reliability | `202 Accepted` run API, transactional outbox, leased worker, exponential retry, dead-letter state and idempotent findings | Temporal or another external durable workflow runtime |
+| Identity | HS256 JWT validation with algorithm, signature, issuer, audience, expiry and subject checks; explicit development-only header mode | Institution-owned OIDC/JWKS and authorization claims |
+| Documents | Bounded binary ingestion, atomic local object store, canonical SHA-256, audit event and custody entry in one database transaction | S3, malware scanning, OCR and PII redaction |
+| Experience | React workbench bound to live case summaries and asynchronous run status; graph/evidence fixture only in explicit demo mode | Live graph, evidence and review projections |
 
 ## Quality proof
 
@@ -167,18 +168,18 @@ These numbers come from the release workflow—not from README decoration.
 
 | Gate | Verified result | What it protects |
 |---|---:|---|
-| Backend tests | **34 passed** | Domain, API, persistence, policy and reliability behavior |
-| Branch-aware coverage | **90.76%** | Untested decision paths |
+| Backend tests | **45 passed** | Domain, API, persistence, identity, audit, policy and reliability behavior |
+| Branch-aware coverage | **84.63%** | Untested decision paths across the expanded runtime |
 | Grounding evaluations | **10 / 10** | Hallucinated, duplicate and cross-case citations |
 | False accepts | **0** | Unsafe proposals entering persistence |
-| Frontend tests | **6 passed** | Investigation interactions and critical states |
-| Frontend branch coverage | **91.22%** | UI decision paths |
+| Frontend tests | **7 passed** | Investigation interactions, live binding and critical states |
+| Frontend branch coverage | **85.61%** | UI decision paths |
 | OPA policy tests | **4 passed** | Authorization and four-eyes obligations |
 | Migration gate | **No drift** | ORM/schema divergence |
-| Production dependency audit | **0 vulnerabilities** | Known frontend runtime vulnerabilities |
+| Dependency audits | **0 known vulnerabilities** | Audited Python environment and frontend runtime dependencies |
 | Full-stack smoke | **Passed** | PostgreSQL → migration → seed → OPA → API → web → review |
 
-The CI pipeline also runs Ruff, strict MyPy, ESLint, TypeScript type checking, locked builds, Compose validation and a real HTTP investigation/review flow.
+The CI pipeline also runs Ruff, strict MyPy, ESLint, TypeScript type checking, lock-enforced Python and Node builds, Compose validation and a real HTTP investigation/review flow.
 
 [Inspect the latest workflow →](https://github.com/Runaway1457/evidencegraph-financial-crime/actions/workflows/ci.yml)
 
@@ -202,13 +203,20 @@ Open [http://localhost:8080](http://localhost:8080). Compose starts PostgreSQL, 
 # Readiness
 curl --fail http://localhost:8080/health/ready
 
-# Start a grounded investigation
+# Queue a grounded investigation
 curl --fail --request POST \
   --header "X-Actor-ID: analyst_1" \
   http://localhost:8080/api/v1/cases/case_1/investigations
 ```
 
-Use a second actor to review the returned finding:
+The response is `202 Accepted` and contains a run ID. Poll it until the worker completes:
+
+```bash
+curl --fail http://localhost:8080/api/v1/investigation-runs/RUN_ID
+curl --fail http://localhost:8080/api/v1/cases/case_1/findings
+```
+
+Use a second actor—not the requesting analyst—to review the resulting finding:
 
 ```bash
 curl --fail --request POST \
@@ -253,12 +261,16 @@ evidencegraph-financial-crime/
 
 Security controls are part of the architecture, not a final checklist:
 
-- SHA-256 evidence and custody chains;
-- append-oriented audit events;
+- canonical lowercase SHA-256 evidence digests and custody chains;
+- application- and PostgreSQL-enforced append-only audit/custody rows;
 - composite foreign keys preventing cross-case graph and citation links;
 - OPA policy decisions scoped by action and case;
 - domain-enforced independent review;
 - atomic validation of proposal batches;
+- signed JWT verification in the secure profile and development auth rejected in production;
+- optimistic aggregate versions and case-local unique finding signatures;
+- bounded request bodies, edge rate limiting and atomic object writes;
+- structured JSON request logs with low-cardinality routes and correlation IDs;
 - generic external errors without internal exception leakage;
 - non-root containers, read-only filesystems and `no-new-privileges`;
 - internal data/control networks with edge-only web exposure;
@@ -275,6 +287,7 @@ Read the [threat model](docs/threat-model.md) and [security policy](SECURITY.md)
 | [ADR-0002: Transactional outbox](docs/adr/0002-transactional-outbox.md) | Why run intent commits with case state |
 | [Threat model](docs/threat-model.md) | Assets, actors, trust boundaries and mitigations |
 | [Testing strategy](docs/testing-strategy.md) | Test pyramid, adversarial cases and release gates |
+| [Engineering standard](docs/engineering-standard.md) | Evidence contract, authorial voice and claim discipline |
 | [Model card](docs/model-card.md) | Investigator behavior and known limitations |
 | [Data card](docs/data-card.md) | Synthetic dataset scope and exclusions |
 | [Runbook](docs/runbook.md) | Operational diagnosis and recovery |
@@ -297,15 +310,18 @@ These choices are intentionally documented so reviewers can disagree with them u
 - [x] Multi-hop graph traversal with cited relationships
 - [x] Deterministic investigation baseline
 - [x] OPA policy boundary and independent review
-- [x] Transactional outbox primitives
+- [x] Transactional outbox, asynchronous run API and recoverable worker
+- [x] Bounded binary ingestion with audit and custody persistence
+- [x] Optimistic concurrency and database idempotency constraint
+- [x] Structured request logging and signed-JWT profile
 - [x] Reproducible grounding evaluation suite
 - [x] High-density forensic workbench
 - [x] Full-stack CI smoke path
-- [ ] Live workbench/API integration
+- [x] Live case queue and asynchronous run-status integration
 - [ ] Model-backed investigator behind the existing port
-- [ ] Production OIDC identity verification
+- [ ] Institution-owned OIDC/JWKS identity adapter
 - [ ] Durable workflow adapter and worker runtime
-- [ ] Document ingestion, OCR, PII controls and object storage
+- [ ] OCR, PII controls, malware scanning and S3 adapter
 
 ## Contributing
 

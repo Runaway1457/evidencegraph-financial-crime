@@ -106,7 +106,8 @@ def test_agent_proposal_is_grounded_persisted_and_idempotent() -> None:
     replayed = service.run(case_id=case.id, actor_id="analyst_1")
 
     assert len(created) == 1
-    assert created[0].proposed_by == "agent:test"
+    assert created[0].proposed_by == "analyst_1"
+    assert created[0].generated_by == "agent:test"
     assert replayed == ()
     assert len(repository.get(case.id).findings) == 1
 
@@ -169,7 +170,7 @@ def test_independent_reviewer_can_confirm_proposed_finding() -> None:
         service.review(
             case_id=case.id,
             finding_id=finding.id,
-            reviewer_id="agent:test",
+            reviewer_id="analyst_1",
             decision=FindingStatus.CONFIRMED,
         )
 

@@ -47,3 +47,28 @@ export interface TimelineEvent {
   detail: string;
   kind: "transaction" | "document" | "ai" | "risk" | "review";
 }
+
+export interface CaseQueueItem {
+  id: string;
+  name: string;
+  cue: string;
+  risk: number | null;
+  age: string;
+  evidenceCount?: number;
+}
+
+export interface ApiCase {
+  id: string;
+  title: string;
+  description: string;
+  status: "open" | "under_review" | "closed";
+  evidence_count: number;
+  version: number;
+}
+
+export interface InvestigationRun {
+  id: string;
+  case_id: string;
+  status: "queued" | "running" | "completed" | "failed";
+  error_code: string | null;
+}

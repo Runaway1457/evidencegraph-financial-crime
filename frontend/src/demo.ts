@@ -1,4 +1,10 @@
-import type { EvidenceItem, GraphEdge, GraphNode, TimelineEvent } from "./types";
+import type { CaseQueueItem, EvidenceItem, GraphEdge, GraphNode, TimelineEvent } from "./types";
+
+export const demoCaseQueue: readonly CaseQueueItem[] = [
+  { id: "EG-2026-0147", name: "Project Meridian", cue: "Layering · Crypto off-ramp", risk: 87, age: "18m" },
+  { id: "EG-2026-0139", name: "Northstar", cue: "Trade finance · UBO", risk: 74, age: "2h" },
+  { id: "EG-2026-0128", name: "Amber Route", cue: "Sanctions · Shipping", risk: 68, age: "1d" },
+];
 
 export const nodes: GraphNode[] = [
   { id: "elena", label: "Elena Kovac", detail: "Person · EE", kind: "person", x: 145, y: 68 },

@@ -25,7 +25,7 @@ def test_case_and_evidence_lifecycle() -> None:
 
     hydrated = service.get_case(case.id)
     assert hydrated.evidence == (evidence,)
-    assert service.list_cases() == (hydrated,)
+    assert service.list_cases() == (hydrated.summary(),)
 
 
 def test_missing_case_is_explicit() -> None:

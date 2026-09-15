@@ -1,14 +1,16 @@
 from dataclasses import replace
 
-from evidencegraph.application.grounding import validate_agent_proposals
 from evidencegraph.application.ports import (
+    AgentFindingProposal,
     CaseRepository,
     InvestigatorAgent,
+    ObjectStore,
     PolicyPort,
 )
-from evidencegraph.domain.errors import AuthorizationDeniedError, NotFoundError
+from evidencegraph.domain.errors import AuthorizationDeniedError, DomainError, NotFoundError
 from evidencegraph.domain.hashing import sha256_bytes
 from evidencegraph.domain.models import (
+    CaseSummary,
     Evidence,
     EvidenceType,
     Finding,
@@ -20,8 +22,9 @@ from evidencegraph.domain.models import (
 
 
 class CaseService:
-    def __init__(self, repository: CaseRepository) -> None:
+    def __init__(self, repository: CaseRepository, object_store: ObjectStore | None = None) -> None:
         self._repository = repository
+        self._object_store = object_store
 
     def create_case(self, *, title: str, description: str, actor_id: str) -> InvestigationCase:
         case = InvestigationCase.create(
@@ -38,8 +41,8 @@ class CaseService:
             raise NotFoundError(f"case {case_id!r} was not found")
         return case
 
-    def list_cases(self) -> tuple[InvestigationCase, ...]:
-        return self._repository.list()
+    def list_cases(self, *, limit: int = 50, offset: int = 0) -> tuple[CaseSummary, ...]:
+        return self._repository.list_summaries(limit=limit, offset=offset)
 
     def ingest_evidence(
         self,
@@ -67,7 +70,14 @@ class CaseService:
             page=page,
             bounding_box=bounding_box,
         )
-        self._repository.save(case.add_evidence(evidence))
+        if self._object_store is not None:
+            self._object_store.put(storage_key, content)
+        try:
+            self._repository.save(case.add_evidence(evidence))
+        except Exception:
+            if self._object_store is not None:
+                self._object_store.delete(storage_key)
+            raise
         return evidence
 
 
@@ -86,6 +96,43 @@ class InvestigationService:
 
     def run(self, *, case_id: str, actor_id: str) -> tuple[Finding, ...]:
         case = self._get_case(case_id)
+        self.authorize_run(case_id=case_id, actor_id=actor_id)
+
+        proposals = self._agent.propose(case)
+        self._validate_proposals(case, proposals)
+
+        existing_signatures = {finding.signature_sha256 for finding in case.findings}
+        created: list[Finding] = []
+        for proposal in proposals:
+            finding = Finding(
+                id=new_id("finding"),
+                case_id=case.id,
+                title=proposal.title.strip(),
+                rationale=proposal.rationale.strip(),
+                evidence_ids=proposal.evidence_ids,
+                status=FindingStatus.PROPOSED,
+                confidence=proposal.confidence,
+                proposed_by=actor_id,
+                generated_by=self._agent.identity,
+                proposed_at=utc_now(),
+            )
+            if finding.signature_sha256 in existing_signatures:
+                continue
+            created.append(finding)
+            existing_signatures.add(finding.signature_sha256)
+
+        if created:
+            self._repository.save(
+                replace(
+                    case,
+                    findings=(*case.findings, *created),
+                    version=case.version + 1,
+                )
+            )
+        return tuple(created)
+
+    def authorize_run(self, *, case_id: str, actor_id: str) -> None:
+        self._get_case(case_id)
         decision = self._policy.authorize(
             actor_id=actor_id,
             action="investigation.run",
@@ -93,37 +140,6 @@ class InvestigationService:
         )
         if not decision.allowed:
             raise AuthorizationDeniedError(decision.reason or "policy denied investigation")
-
-        proposals = self._agent.propose(case)
-        validate_agent_proposals(case, proposals)
-
-        existing_signatures = {
-            (finding.title, finding.rationale, finding.evidence_ids) for finding in case.findings
-        }
-        staged = case
-        created: list[Finding] = []
-        for proposal in proposals:
-            signature = (proposal.title.strip(), proposal.rationale.strip(), proposal.evidence_ids)
-            if signature in existing_signatures:
-                continue
-            finding = Finding(
-                id=new_id("finding"),
-                case_id=case.id,
-                title=signature[0],
-                rationale=signature[1],
-                evidence_ids=proposal.evidence_ids,
-                status=FindingStatus.PROPOSED,
-                confidence=proposal.confidence,
-                proposed_by=self._agent.identity,
-                proposed_at=utc_now(),
-            )
-            staged = staged.add_finding(finding)
-            created.append(finding)
-            existing_signatures.add(signature)
-
-        if created:
-            self._repository.save(staged)
-        return tuple(created)
 
     def review(
         self,
@@ -147,7 +163,7 @@ class InvestigationService:
             raise NotFoundError("finding was not found")
         reviewed = finding.review(reviewer_id=reviewer_id, decision=decision)
         findings = tuple(reviewed if item.id == finding_id else item for item in case.findings)
-        self._repository.save(replace(case, findings=findings))
+        self._repository.save(replace(case, findings=findings, version=case.version + 1))
         return reviewed
 
     def _get_case(self, case_id: str) -> InvestigationCase:
@@ -155,3 +171,19 @@ class InvestigationService:
         if case is None:
             raise NotFoundError(f"case {case_id!r} was not found")
         return case
+
+    @staticmethod
+    def _validate_proposals(
+        case: InvestigationCase,
+        proposals: tuple[AgentFindingProposal, ...],
+    ) -> None:
+        known_evidence = {item.id for item in case.evidence}
+        for proposal in proposals:
+            if not proposal.title.strip() or not proposal.rationale.strip():
+                raise DomainError("agent proposals require title and rationale")
+            if not proposal.evidence_ids:
+                raise DomainError("agent proposals must cite evidence")
+            if missing := set(proposal.evidence_ids) - known_evidence:
+                raise DomainError(f"agent cited unknown evidence: {sorted(missing)}")
+            if not 0.0 <= proposal.confidence <= 1.0:
+                raise DomainError("agent confidence must be between 0 and 1")

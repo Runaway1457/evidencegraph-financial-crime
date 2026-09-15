@@ -19,12 +19,24 @@ def test_sha256_is_stable() -> None:
 
 
 def test_evidence_rejects_invalid_digest() -> None:
-    with pytest.raises(DomainError, match="64-character"):
+    with pytest.raises(DomainError, match="canonical lowercase"):
         Evidence.create(
             case_id="case_1",
             evidence_type=EvidenceType.DOCUMENT,
             source="upload",
             content_sha256="invalid",
+            storage_key="case_1/document.pdf",
+            ingested_by="analyst_1",
+        )
+
+
+def test_evidence_rejects_non_canonical_uppercase_digest() -> None:
+    with pytest.raises(DomainError, match="canonical lowercase"):
+        Evidence.create(
+            case_id="case_1",
+            evidence_type=EvidenceType.DOCUMENT,
+            source="upload",
+            content_sha256="A" * 64,
             storage_key="case_1/document.pdf",
             ingested_by="analyst_1",
         )
@@ -53,6 +65,7 @@ def test_finding_enforces_four_eyes() -> None:
         status=FindingStatus.PROPOSED,
         confidence=0.91,
         proposed_by="analyst_1",
+        generated_by="agent_1",
         proposed_at=utc_now(),
     )
 
@@ -61,6 +74,8 @@ def test_finding_enforces_four_eyes() -> None:
 
     confirmed = finding.review(reviewer_id="analyst_2", decision=FindingStatus.CONFIRMED)
     assert confirmed.reviewed_by == "analyst_2"
+    with pytest.raises(DomainError, match="already been reviewed"):
+        confirmed.review(reviewer_id="analyst_3", decision=FindingStatus.REJECTED)
 
 
 def test_case_accepts_only_its_own_evidence() -> None:

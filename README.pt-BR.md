@@ -27,7 +27,7 @@ Em investigação financeira, uma resposta convincente não basta. A conclusão 
 | Relação sem prova | Cada aresta material aponta para evidências do mesmo caso |
 | Alteração de fonte | SHA-256 e cadeia de custódia |
 | Autorização fraca | Política OPA avalia ator, ação, caso e obrigações |
-| Autoaprovação | Princípio de quatro olhos aplicado no domínio |
+| Autoaprovação | Solicitante humano e agente gerador são identidades distintas; o solicitante não pode revisar |
 | Duplicação por retry | Assinatura idempotente e transactional outbox |
 
 ## Experiência de investigação
@@ -59,17 +59,18 @@ O modelo de IA nunca é o system of record. Sua saída entra na aplicação como
 - **Infraestrutura:** SQLAlchemy, PostgreSQL, OPA e transactional outbox.
 - **Entrega:** FastAPI e workspace React.
 
-O repositório separa explicitamente o que já está implementado das integrações planejadas. Atualmente há investigador determinístico, grafo multi-hop, PostgreSQL, OPA, outbox, API, interface e smoke test completo. Model-backed agents, OIDC, OCR e workflow externo permanecem como adapters futuros.
+O repositório separa explicitamente o que já está implementado das integrações planejadas. Atualmente há investigador determinístico, grafo multi-hop, PostgreSQL, OPA, API assíncrona de runs, worker com outbox, ingestão binária limitada, armazenamento atômico, auditoria persistida, JWT assinado e interface conectada à fila de casos. Model-backed agents, OIDC/JWKS institucional, OCR e workflow externo permanecem como adapters futuros.
 
 ## Evidências de qualidade
 
 | Gate | Resultado |
 |---|---:|
-| Testes backend | **34 aprovados** |
-| Cobertura branch-aware | **90,76%** |
+| Testes backend | **45 aprovados** |
+| Cobertura branch-aware | **84,63%** |
 | Evals de grounding | **10/10** |
 | False accepts | **0** |
-| Testes frontend | **6 aprovados** |
+| Testes frontend | **7 aprovados** |
+| Cobertura de branches no frontend | **85,61%** |
 | Testes OPA | **4 aprovados** |
 | Drift de migration | **Nenhum** |
 | Smoke test ponta a ponta | **Aprovado** |
@@ -89,6 +90,7 @@ Abra [http://localhost:8080](http://localhost:8080).
 - [Arquitetura](docs/architecture.md)
 - [Threat model](docs/threat-model.md)
 - [Estratégia de testes](docs/testing-strategy.md)
+- [Padrão de engenharia](docs/engineering-standard.md)
 - [Model card](docs/model-card.md)
 - [Data card](docs/data-card.md)
 - [Runbook](docs/runbook.md)

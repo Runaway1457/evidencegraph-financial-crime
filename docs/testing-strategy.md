@@ -1,28 +1,42 @@
 # Testing strategy
 
-Testing is organized by risk, not only by the testing pyramid.
+Tests are selected by failure cost and trust boundary, not by file count.
 
-## Suites
+## Executed suites
 
-1. **Domain unit tests** verify evidence integrity, same-case ownership, four-eyes review, graph grounding, and audit-chain behavior.
-2. **Application tests** verify transactions, rollback, idempotency, authorization decisions, and failure translation.
-3. **Adapter contracts** run the same behavioral contract against in-memory and production adapters.
-4. **Integration tests** use PostgreSQL, S3-compatible storage, OPA, Temporal, and workers.
-5. **API tests** cover schemas, limits, identity propagation, error redaction, and concurrency.
-6. **Frontend tests** cover evidence visibility, review warnings, graph selection, keyboard behavior, and critical responsive states.
-7. **AI evaluations** score citation validity, evidence coverage, unsupported-claim rate, tool-policy compliance, privacy leakage, and resistance to prompt injection.
-8. **Release smoke tests** migrate a clean database, seed a synthetic case, execute an investigation, review a finding, export an Evidence Packet, and verify its manifest.
+| Suite | Current responsibility |
+|---|---|
+| Domain | canonical digests, same-case ownership, four-eyes review, terminal review state, graph paths and hash chains |
+| Application | batch grounding, rollback, policy denial, requester/generator identity and retry idempotency |
+| Persistence | composite foreign keys, unique finding signatures, optimistic locking, audit/custody persistence and append-only guards |
+| Reliability | outbox lease, retry, dead-letter behavior and end-to-end worker completion |
+| API | bounded binary ingestion, redacted errors, paginated cases, asynchronous runs and review flow |
+| Identity | token signature, issuer, audience, expiry and subject checks |
+| Frontend | graph inspection, keyboard flow, governance state, explicit demo mode and live case-summary binding |
+| Policy | Rego allow/deny behavior and review obligations |
+| AI evaluation | citation existence, case scope, duplicate citations and confidence bounds against a versioned synthetic corpus |
+| Stack smoke | clean PostgreSQL migration, seed, OPA, API, worker, Nginx, queued run, completed finding and independent review |
 
-## Gates
+## Release gates
 
-- Python lint and format: Ruff
-- Python typing: MyPy strict
-- Backend branch-aware coverage: minimum 80%
-- Frontend lint and strict TypeScript
-- Frontend coverage: lines/statements 70%, functions 65%, branches 60%
-- Clean build for API and web images
-- Migration drift check
-- Dependency, secret, CodeQL, SBOM, and container scans
-- No critical/high vulnerabilities accepted without an explicit, expiring risk record
+- Ruff lint and formatting
+- strict MyPy
+- backend branch-aware coverage ≥ 80%
+- ESLint and TypeScript build
+- frontend lines/statements ≥ 70%, functions ≥ 65%, branches ≥ 60%
+- Alembic clean-database upgrade and drift check
+- OPA policy tests
+- lock-enforced Python and npm installs, plus blocking Python and frontend dependency audits
+- Docker Compose validation and HTTP stack smoke in GitHub Actions
 
-Coverage thresholds are floors. Mutation testing and risk-focused assertions are preferred over raising coverage with low-value lines.
+The local environment used for development does not include Docker. Container and PostgreSQL integration are therefore release claims only after the connected GitHub Actions job passes; local SQLite results are not substituted for that evidence.
+
+## Next quality gates
+
+- mutation testing for the highest-risk domain invariants;
+- OIDC/JWKS contract tests when that adapter exists;
+- S3, malware scanner, OCR and PII adapter contracts;
+- performance budgets for large graph and evidence projections;
+- chaos tests around worker termination and lease recovery.
+
+Coverage is a floor. A branch count never replaces assertions about unsafe failure behavior.

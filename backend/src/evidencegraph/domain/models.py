@@ -1,10 +1,11 @@
+import re
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import StrEnum
-from string import hexdigits
 from uuid import uuid4
 
 from evidencegraph.domain.errors import DomainError
+from evidencegraph.domain.hashing import canonical_sha256
 
 
 def new_id(prefix: str) -> str:
@@ -16,8 +17,8 @@ def utc_now() -> datetime:
 
 
 def _require_sha256(value: str) -> None:
-    if len(value) != 64 or any(char not in hexdigits for char in value):
-        raise DomainError("content_sha256 must be a 64-character hexadecimal digest")
+    if re.fullmatch(r"[0-9a-f]{64}", value) is None:
+        raise DomainError("content_sha256 must be a canonical lowercase SHA-256 digest")
 
 
 class CaseStatus(StrEnum):
@@ -47,6 +48,37 @@ class FindingStatus(StrEnum):
     PROPOSED = "proposed"
     CONFIRMED = "confirmed"
     REJECTED = "rejected"
+
+
+class InvestigationRunStatus(StrEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+@dataclass(frozen=True, slots=True)
+class InvestigationRun:
+    id: str
+    case_id: str
+    status: InvestigationRunStatus
+    requested_by: str
+    requested_at: datetime
+    started_at: datetime | None = None
+    completed_at: datetime | None = None
+    error_code: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class CaseSummary:
+    id: str
+    title: str
+    description: str
+    created_by: str
+    created_at: datetime
+    status: CaseStatus
+    evidence_count: int
+    version: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -146,6 +178,7 @@ class Finding:
     status: FindingStatus
     confidence: float
     proposed_by: str
+    generated_by: str
     proposed_at: datetime
     reviewed_by: str | None = None
     reviewed_at: datetime | None = None
@@ -153,6 +186,10 @@ class Finding:
     def __post_init__(self) -> None:
         if not self.evidence_ids:
             raise DomainError("finding must cite at least one evidence item")
+        if len(set(self.evidence_ids)) != len(self.evidence_ids):
+            raise DomainError("finding evidence citations must be unique")
+        if not self.proposed_by.strip() or not self.generated_by.strip():
+            raise DomainError("finding requester and generator identities are required")
         if not 0.0 <= self.confidence <= 1.0:
             raise DomainError("confidence must be between 0 and 1")
         if self.status is not FindingStatus.PROPOSED and self.reviewed_by is None:
@@ -161,6 +198,8 @@ class Finding:
             raise DomainError("four-eyes principle forbids self-review")
 
     def review(self, *, reviewer_id: str, decision: FindingStatus) -> "Finding":
+        if self.status is not FindingStatus.PROPOSED:
+            raise DomainError("finding has already been reviewed")
         if decision is FindingStatus.PROPOSED:
             raise DomainError("review decision must resolve the finding")
         return replace(
@@ -168,6 +207,17 @@ class Finding:
             status=decision,
             reviewed_by=reviewer_id,
             reviewed_at=utc_now(),
+        )
+
+    @property
+    def signature_sha256(self) -> str:
+        """Canonical identity used to make agent retries idempotent."""
+        return canonical_sha256(
+            {
+                "title": self.title.strip(),
+                "rationale": self.rationale.strip(),
+                "evidence_ids": sorted(self.evidence_ids),
+            }
         )
 
 
@@ -179,10 +229,27 @@ class InvestigationCase:
     created_by: str
     created_at: datetime
     status: CaseStatus = CaseStatus.OPEN
+    version: int = 0
     evidence: tuple[Evidence, ...] = ()
     entities: tuple[Entity, ...] = ()
     relationships: tuple[Relationship, ...] = ()
     findings: tuple[Finding, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.version < 0:
+            raise DomainError("case version cannot be negative")
+
+    def summary(self) -> CaseSummary:
+        return CaseSummary(
+            id=self.id,
+            title=self.title,
+            description=self.description,
+            created_by=self.created_by,
+            created_at=self.created_at,
+            status=self.status,
+            evidence_count=len(self.evidence),
+            version=self.version,
+        )
 
     @classmethod
     def create(cls, *, title: str, description: str, created_by: str) -> "InvestigationCase":
@@ -201,7 +268,7 @@ class InvestigationCase:
             raise DomainError("evidence belongs to another case")
         if any(existing.id == item.id for existing in self.evidence):
             raise DomainError("evidence id already exists")
-        return replace(self, evidence=(*self.evidence, item))
+        return replace(self, evidence=(*self.evidence, item), version=self.version + 1)
 
     def add_finding(self, item: Finding) -> "InvestigationCase":
         if item.case_id != self.id:
@@ -211,4 +278,4 @@ class InvestigationCase:
         known_evidence = {evidence.id for evidence in self.evidence}
         if missing := set(item.evidence_ids) - known_evidence:
             raise DomainError(f"finding cites unknown evidence: {sorted(missing)}")
-        return replace(self, findings=(*self.findings, item))
+        return replace(self, findings=(*self.findings, item), version=self.version + 1)

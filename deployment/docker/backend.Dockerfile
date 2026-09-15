@@ -1,14 +1,15 @@
 FROM python:3.12.14-slim-bookworm AS builder
 
-ENV VIRTUAL_ENV=/opt/evidencegraph
-RUN python -m venv "$VIRTUAL_ENV"
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+COPY --from=ghcr.io/astral-sh/uv:0.12.11 /uv /uvx /bin/
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PROJECT_ENVIRONMENT=/opt/evidencegraph
 
 WORKDIR /build
-COPY pyproject.toml README.md ./
+COPY pyproject.toml uv.lock README.md ./
 COPY backend ./backend
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir .
+RUN uv sync --locked --no-dev --no-editable
 
 FROM python:3.12.14-slim-bookworm AS runtime
 

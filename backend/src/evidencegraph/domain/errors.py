@@ -12,3 +12,7 @@ class EvidenceIntegrityError(DomainError):
 
 class AuthorizationDeniedError(DomainError):
     """Policy denied an attempted action."""
+
+
+class ConcurrencyError(DomainError):
+    """Aggregate changed after it was read and must be retried."""

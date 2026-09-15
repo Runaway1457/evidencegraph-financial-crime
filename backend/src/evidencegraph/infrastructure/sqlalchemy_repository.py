@@ -1,10 +1,13 @@
 from collections.abc import Iterable
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session, sessionmaker
 
+from evidencegraph.domain.audit import GENESIS_HASH, AuditEvent
+from evidencegraph.domain.errors import ConcurrencyError
 from evidencegraph.domain.models import (
     CaseStatus,
+    CaseSummary,
     Entity,
     EntityKind,
     Evidence,
@@ -16,7 +19,9 @@ from evidencegraph.domain.models import (
     utc_now,
 )
 from evidencegraph.infrastructure.tables import (
+    AuditEventTable,
     CaseTable,
+    ChainOfCustodyTable,
     EntityTable,
     EvidenceTable,
     FindingEvidenceTable,
@@ -34,6 +39,49 @@ def _bounding_box(values: list[float] | None) -> tuple[float, float, float, floa
     return (float(values[0]), float(values[1]), float(values[2]), float(values[3]))
 
 
+def append_audit_event(
+    session: Session,
+    *,
+    case_id: str,
+    event_type: str,
+    actor_id: str,
+    payload: dict[str, object],
+) -> AuditEvent:
+    # Serialize the audit chain per case. Without this lock, two concurrent
+    # writers can observe the same tail and create a forked hash chain.
+    session.scalar(select(CaseTable.id).where(CaseTable.id == case_id).with_for_update())
+    previous_hash = (
+        session.scalar(
+            select(AuditEventTable.event_hash)
+            .where(AuditEventTable.case_id == case_id)
+            .order_by(AuditEventTable.occurred_at.desc(), AuditEventTable.id.desc())
+            .limit(1)
+        )
+        or GENESIS_HASH
+    )
+    event = AuditEvent.create(
+        case_id=case_id,
+        event_type=event_type,
+        actor_id=actor_id,
+        payload=payload,
+        previous_hash=previous_hash,
+    )
+    session.add(
+        AuditEventTable(
+            id=event.id,
+            case_id=event.case_id,
+            event_type=event.event_type,
+            actor_id=event.actor_id,
+            occurred_at=event.occurred_at,
+            payload=event.payload,
+            previous_hash=event.previous_hash,
+            event_hash=event.event_hash,
+        )
+    )
+    session.flush()
+    return event
+
+
 class SqlAlchemyCaseRepository:
     """SQL-backed aggregate repository.
 
@@ -46,33 +94,152 @@ class SqlAlchemyCaseRepository:
 
     def save(self, case: InvestigationCase) -> None:
         with self._session_factory() as session, session.begin():
-            session.merge(
-                CaseTable(
-                    id=case.id,
-                    title=case.title,
-                    description=case.description,
-                    status=case.status.value,
-                    risk_score=0,
-                    created_by=case.created_by,
-                    created_at=case.created_at,
-                    updated_at=utc_now(),
-                )
+            current = session.scalar(
+                select(CaseTable).where(CaseTable.id == case.id).with_for_update()
             )
+            existing_evidence_ids = self._existing_ids(session, EvidenceTable, case.id)
+            existing_finding_status = {
+                finding_id: status
+                for finding_id, status in session.execute(
+                    select(FindingTable.id, FindingTable.status).where(
+                        FindingTable.case_id == case.id
+                    )
+                )
+            }
+            if current is None:
+                session.add(
+                    CaseTable(
+                        id=case.id,
+                        title=case.title,
+                        description=case.description,
+                        status=case.status.value,
+                        risk_score=0,
+                        created_by=case.created_by,
+                        created_at=case.created_at,
+                        updated_at=utc_now(),
+                        version=case.version,
+                    )
+                )
+            else:
+                if case.version != current.version + 1:
+                    raise ConcurrencyError("case changed after it was read")
+                result = session.execute(
+                    update(CaseTable)
+                    .where(CaseTable.id == case.id, CaseTable.version == current.version)
+                    .values(
+                        title=case.title,
+                        description=case.description,
+                        status=case.status.value,
+                        updated_at=utc_now(),
+                        version=case.version,
+                    )
+                )
+                if getattr(result, "rowcount", 0) != 1:
+                    raise ConcurrencyError("case changed while the update was being committed")
             self._save_evidence(session, case.evidence)
             self._save_entities(session, case.entities)
             session.flush()
             self._save_relationships(session, case.relationships)
             self._save_findings(session, case.findings)
+            session.flush()
+            if current is None:
+                append_audit_event(
+                    session,
+                    case_id=case.id,
+                    event_type="case.created",
+                    actor_id=case.created_by,
+                    payload={"title": case.title},
+                )
+            for evidence in case.evidence:
+                if evidence.id in existing_evidence_ids:
+                    continue
+                event = append_audit_event(
+                    session,
+                    case_id=case.id,
+                    event_type="evidence.ingested",
+                    actor_id=evidence.ingested_by,
+                    payload={
+                        "evidence_id": evidence.id,
+                        "content_sha256": evidence.content_sha256,
+                        "source": evidence.source,
+                        "size_bytes": evidence.size_bytes,
+                    },
+                )
+                session.add(
+                    ChainOfCustodyTable(
+                        id=event.id,
+                        case_id=case.id,
+                        evidence_id=evidence.id,
+                        action="ingested",
+                        actor_id=evidence.ingested_by,
+                        occurred_at=event.occurred_at,
+                        content_sha256=evidence.content_sha256,
+                        previous_hash=event.previous_hash,
+                        event_hash=event.event_hash,
+                    )
+                )
+            for finding in case.findings:
+                previous_status = existing_finding_status.get(finding.id)
+                if previous_status is None:
+                    append_audit_event(
+                        session,
+                        case_id=case.id,
+                        event_type="finding.proposed",
+                        actor_id=finding.proposed_by,
+                        payload={
+                            "finding_id": finding.id,
+                            "generated_by": finding.generated_by,
+                            "signature_sha256": finding.signature_sha256,
+                        },
+                    )
+                elif previous_status != finding.status.value:
+                    append_audit_event(
+                        session,
+                        case_id=case.id,
+                        event_type="finding.reviewed",
+                        actor_id=finding.reviewed_by or "unknown-reviewer",
+                        payload={"finding_id": finding.id, "decision": finding.status.value},
+                    )
 
     def get(self, case_id: str) -> InvestigationCase | None:
         with self._session_factory() as session:
             row = session.get(CaseTable, case_id)
             return None if row is None else self._hydrate(session, row)
 
-    def list(self) -> tuple[InvestigationCase, ...]:
+    def list(self, *, limit: int = 50, offset: int = 0) -> tuple[InvestigationCase, ...]:
         with self._session_factory() as session:
-            rows = session.scalars(select(CaseTable).order_by(CaseTable.created_at.desc())).all()
+            rows = session.scalars(
+                select(CaseTable).order_by(CaseTable.created_at.desc()).limit(limit).offset(offset)
+            ).all()
             return tuple(self._hydrate(session, row) for row in rows)
+
+    def list_summaries(self, *, limit: int, offset: int) -> tuple[CaseSummary, ...]:
+        with self._session_factory() as session:
+            rows = session.execute(
+                select(CaseTable, func.count(EvidenceTable.id))
+                .outerjoin(EvidenceTable, EvidenceTable.case_id == CaseTable.id)
+                .group_by(CaseTable.id)
+                .order_by(CaseTable.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            ).all()
+            return tuple(
+                CaseSummary(
+                    id=case.id,
+                    title=case.title,
+                    description=case.description,
+                    created_by=case.created_by,
+                    created_at=case.created_at,
+                    status=CaseStatus(case.status),
+                    evidence_count=evidence_count,
+                    version=case.version,
+                )
+                for case, evidence_count in rows
+            )
+
+    @staticmethod
+    def _existing_ids(session: Session, table: type[EvidenceTable], case_id: str) -> set[str]:
+        return set(session.scalars(select(table.id).where(table.case_id == case_id)))
 
     @staticmethod
     def _save_evidence(session: Session, items: Iterable[Evidence]) -> None:
@@ -143,6 +310,8 @@ class SqlAlchemyCaseRepository:
                     status=item.status.value,
                     confidence=item.confidence,
                     proposed_by=item.proposed_by,
+                    generated_by=item.generated_by,
+                    signature_sha256=item.signature_sha256,
                     proposed_at=item.proposed_at,
                     reviewed_by=item.reviewed_by,
                     reviewed_at=item.reviewed_at,
@@ -179,6 +348,23 @@ class SqlAlchemyCaseRepository:
             .order_by(FindingTable.proposed_at)
         ).all()
 
+        relationship_evidence: dict[str, list[str]] = {}
+        for relationship_id, evidence_id in session.execute(
+            select(
+                RelationshipEvidenceTable.relationship_id,
+                RelationshipEvidenceTable.evidence_id,
+            ).where(RelationshipEvidenceTable.case_id == row.id)
+        ):
+            relationship_evidence.setdefault(relationship_id, []).append(evidence_id)
+
+        finding_evidence: dict[str, list[str]] = {}
+        for finding_id, evidence_id in session.execute(
+            select(FindingEvidenceTable.finding_id, FindingEvidenceTable.evidence_id).where(
+                FindingEvidenceTable.case_id == row.id
+            )
+        ):
+            finding_evidence.setdefault(finding_id, []).append(evidence_id)
+
         evidence = tuple(
             Evidence(
                 id=item.id,
@@ -213,14 +399,7 @@ class SqlAlchemyCaseRepository:
                 source_entity_id=item.source_entity_id,
                 target_entity_id=item.target_entity_id,
                 relationship_type=item.relationship_type,
-                evidence_ids=tuple(
-                    session.scalars(
-                        select(RelationshipEvidenceTable.evidence_id).where(
-                            RelationshipEvidenceTable.case_id == row.id,
-                            RelationshipEvidenceTable.relationship_id == item.id,
-                        )
-                    )
-                ),
+                evidence_ids=tuple(relationship_evidence.get(item.id, ())),
                 confidence=item.confidence,
             )
             for item in relationship_rows
@@ -231,17 +410,11 @@ class SqlAlchemyCaseRepository:
                 case_id=item.case_id,
                 title=item.title,
                 rationale=item.rationale,
-                evidence_ids=tuple(
-                    session.scalars(
-                        select(FindingEvidenceTable.evidence_id).where(
-                            FindingEvidenceTable.case_id == row.id,
-                            FindingEvidenceTable.finding_id == item.id,
-                        )
-                    )
-                ),
+                evidence_ids=tuple(finding_evidence.get(item.id, ())),
                 status=FindingStatus(item.status),
                 confidence=item.confidence,
                 proposed_by=item.proposed_by,
+                generated_by=item.generated_by,
                 proposed_at=item.proposed_at,
                 reviewed_by=item.reviewed_by,
                 reviewed_at=item.reviewed_at,
@@ -255,6 +428,7 @@ class SqlAlchemyCaseRepository:
             created_by=row.created_by,
             created_at=row.created_at,
             status=CaseStatus(row.status),
+            version=row.version,
             evidence=evidence,
             entities=entities,
             relationships=relationships,

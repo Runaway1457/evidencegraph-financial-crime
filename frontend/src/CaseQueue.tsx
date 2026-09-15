@@ -1,41 +1,19 @@
 import { AlertTriangle, CheckCircle2, Clock3, UserRoundCheck } from "lucide-react";
+import type { CaseQueueItem } from "./types";
 
 interface CaseQueueProps {
   activeCaseId: string;
+  cases: readonly CaseQueueItem[];
   onSelectCase: (caseId: string) => void;
 }
 
-const cases = [
-  {
-    id: "EG-2026-0147",
-    name: "Project Meridian",
-    cue: "Layering · Crypto off-ramp",
-    risk: 87,
-    age: "18m",
-  },
-  {
-    id: "EG-2026-0139",
-    name: "Northstar",
-    cue: "Trade finance · UBO",
-    risk: 74,
-    age: "2h",
-  },
-  {
-    id: "EG-2026-0128",
-    name: "Amber Route",
-    cue: "Sanctions · Shipping",
-    risk: 68,
-    age: "1d",
-  },
-] as const;
-
-export function CaseQueue({ activeCaseId, onSelectCase }: CaseQueueProps) {
+export function CaseQueue({ activeCaseId, cases, onSelectCase }: CaseQueueProps) {
   return (
     <aside className="case-queue panel" aria-label="Priority case queue">
       <div className="queue-heading">
         <div>
           <span>Priority queue</span>
-          <strong>12 active cases</strong>
+          <strong>{cases.length} active cases</strong>
         </div>
         <button aria-label="Queue options" type="button">•••</button>
       </div>
@@ -59,7 +37,7 @@ export function CaseQueue({ activeCaseId, onSelectCase }: CaseQueueProps) {
               <span>{item.cue}</span>
             </span>
             <span className="queue-score">
-              <strong>{item.risk}</strong>
+              <strong>{item.risk ?? "—"}</strong>
               <small>{item.age}</small>
             </span>
           </button>

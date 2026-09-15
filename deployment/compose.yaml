@@ -20,7 +20,7 @@ services:
     image: openpolicyagent/opa:1.8.0-static
     command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies"]
     volumes:
-      - ../policies:/policies:ro
+      - ../policies/bundle:/policies:ro
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -33,7 +33,7 @@ services:
     command: ["alembic", "upgrade", "head"]
     environment:
       EG_DATABASE_URL: postgresql+psycopg://evidencegraph:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/evidencegraph
-      EG_ENVIRONMENT: production
+      EG_ENVIRONMENT: development
     depends_on:
       db:
         condition: service_healthy
@@ -47,7 +47,7 @@ services:
     command: ["python", "scripts/seed_demo.py"]
     environment:
       EG_DATABASE_URL: postgresql+psycopg://evidencegraph:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/evidencegraph
-      EG_ENVIRONMENT: production
+      EG_ENVIRONMENT: development
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -60,10 +60,36 @@ services:
       dockerfile: deployment/docker/backend.Dockerfile
     environment:
       EG_DATABASE_URL: postgresql+psycopg://evidencegraph:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/evidencegraph
-      EG_ENVIRONMENT: production
+      EG_ENVIRONMENT: development
       EG_AUTH_MODE: development
       EG_OPA_URL: http://opa:8181
       EG_CORS_ORIGINS: '["http://localhost:8080"]'
+      EG_OBJECT_STORE_PATH: /var/lib/evidencegraph/objects
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      opa:
+        condition: service_started
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    volumes:
+      - evidence-objects:/var/lib/evidencegraph/objects
+    security_opt:
+      - no-new-privileges:true
+    networks: [data, control, edge]
+
+  worker:
+    build:
+      context: ..
+      dockerfile: deployment/docker/backend.Dockerfile
+    command: ["python", "-m", "evidencegraph.worker"]
+    environment:
+      EG_DATABASE_URL: postgresql+psycopg://evidencegraph:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/evidencegraph
+      EG_ENVIRONMENT: development
+      EG_AUTH_MODE: development
+      EG_OPA_URL: http://opa:8181
+      EG_OUTBOX_POLL_SECONDS: 0.5
     depends_on:
       seed:
         condition: service_completed_successfully
@@ -74,7 +100,7 @@ services:
       - /tmp:size=16m,noexec,nosuid
     security_opt:
       - no-new-privileges:true
-    networks: [data, control, edge]
+    networks: [data, control]
 
   web:
     build:
@@ -96,6 +122,7 @@ services:
 
 volumes:
   postgres-data:
+  evidence-objects:
 
 networks:
   edge:
