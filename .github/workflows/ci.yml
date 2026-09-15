@@ -147,4 +147,18 @@ jobs:
             sleep 2
           done
           curl --fail --silent http://127.0.0.1:8080/ | grep --quiet "EvidenceGraph"
+          curl --fail --silent --request POST \
+            --header "X-Actor-ID: analyst_1" \
+            http://127.0.0.1:8080/api/v1/cases/case_1/investigations \
+            > /tmp/investigation.json
+          finding_id="$(python3 -c 'import json; print(json.load(open("/tmp/investigation.json"))[0]["id"])')"
+          test -n "$finding_id"
+          curl --fail --silent --request POST \
+            --header "Content-Type: application/json" \
+            --header "X-Actor-ID: reviewer_2" \
+            --data '{"decision":"confirmed"}' \
+            "http://127.0.0.1:8080/api/v1/cases/case_1/findings/$finding_id/review" \
+            | grep --quiet '"status":"confirmed"'
+          curl --fail --silent http://127.0.0.1:8080/api/v1/cases/case_1/findings \
+            | grep --quiet '"reviewed_by":"reviewer_2"'
           docker compose -f deployment/compose.yaml ps
