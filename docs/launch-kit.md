@@ -34,8 +34,8 @@ O sistema reúne:
 
 A qualidade também faz parte do produto:
 
-✅ 33 testes backend  
-✅ 91% de cobertura branch-aware  
+✅ 34 testes backend  
+✅ 90,76% de cobertura branch-aware  
 ✅ 6 testes de frontend  
 ✅ 10/10 evals adversariais de grounding  
 ✅ 0 false accepts no conjunto versionado  
@@ -80,7 +80,7 @@ The repository demonstrates:
 
 Verified on the release branch:
 
-✅ 33 backend tests, 91% branch-aware coverage  
+✅ 34 backend tests, 90.76% branch-aware coverage  
 ✅ 6 frontend tests  
 ✅ 10/10 adversarial grounding evals, 0 false accepts  
 ✅ no Alembic schema drift  
@@ -100,7 +100,7 @@ Every finding must resolve to case-local evidence, survive a grounding gate, pas
 
 The repository includes a graph investigation UI, typed FastAPI domain, PostgreSQL/Alembic, OPA, transactional outbox, deterministic baseline, adversarial evals, security docs, and a CI-smoked container stack.
 
-33 backend tests · 91% branch coverage · 10/10 grounding evals · 0 false accepts.
+34 backend tests · 90.76% branch coverage · 10/10 grounding evals · 0 false accepts.
 
 https://github.com/Runaway1457/evidencegraph-financial-crime
 
@@ -179,8 +179,8 @@ Use a crop of the verified screenshot and call out:
 
 **Measured, not claimed.**
 
-- 33 backend tests;
-- 91% branch-aware coverage;
+- 34 backend tests;
+- 90.76% branch-aware coverage;
 - 6 frontend tests;
 - 10/10 adversarial grounding evals;
 - 0 false accepts;
