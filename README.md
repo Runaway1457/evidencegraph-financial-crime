@@ -13,7 +13,7 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=07111c)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)
 ![OPA](https://img.shields.io/badge/Policy-OPA-7D5AE6)
-![Coverage](https://img.shields.io/badge/branch_coverage-86.60%25-21c997)
+![Coverage](https://img.shields.io/badge/branch_coverage-84.63%25-21c997)
 ![Grounding](https://img.shields.io/badge/grounding_evals-10%2F10-21c997)
 ![License](https://img.shields.io/badge/license-Apache--2.0-42d8ff)
 
@@ -169,14 +169,14 @@ These numbers come from the release workflow—not from README decoration.
 | Gate | Verified result | What it protects |
 |---|---:|---|
 | Backend tests | **45 passed** | Domain, API, persistence, identity, audit, policy and reliability behavior |
-| Branch-aware coverage | **86.60%** | Untested decision paths across the expanded runtime |
+| Branch-aware coverage | **84.63%** | Untested decision paths across the expanded runtime |
 | Grounding evaluations | **10 / 10** | Hallucinated, duplicate and cross-case citations |
 | False accepts | **0** | Unsafe proposals entering persistence |
 | Frontend tests | **7 passed** | Investigation interactions, live binding and critical states |
 | Frontend branch coverage | **85.61%** | UI decision paths |
 | OPA policy tests | **4 passed** | Authorization and four-eyes obligations |
 | Migration gate | **No drift** | ORM/schema divergence |
-| Production dependency audit | **0 vulnerabilities** | Known frontend runtime vulnerabilities |
+| Dependency audits | **0 known vulnerabilities** | Audited Python environment and frontend runtime dependencies |
 | Full-stack smoke | **Passed** | PostgreSQL → migration → seed → OPA → API → web → review |
 
 The CI pipeline also runs Ruff, strict MyPy, ESLint, TypeScript type checking, lock-enforced Python and Node builds, Compose validation and a real HTTP investigation/review flow.

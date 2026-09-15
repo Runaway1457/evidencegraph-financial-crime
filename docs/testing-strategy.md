@@ -26,7 +26,7 @@ Tests are selected by failure cost and trust boundary, not by file count.
 - frontend lines/statements ≥ 70%, functions ≥ 65%, branches ≥ 60%
 - Alembic clean-database upgrade and drift check
 - OPA policy tests
-- locked npm install and production dependency audit
+- lock-enforced Python and npm installs, plus blocking Python and frontend dependency audits
 - Docker Compose validation and HTTP stack smoke in GitHub Actions
 
 The local environment used for development does not include Docker. Container and PostgreSQL integration are therefore release claims only after the connected GitHub Actions job passes; local SQLite results are not substituted for that evidence.

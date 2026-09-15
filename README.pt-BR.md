@@ -66,7 +66,7 @@ O repositório separa explicitamente o que já está implementado das integraç�
 | Gate | Resultado |
 |---|---:|
 | Testes backend | **45 aprovados** |
-| Cobertura branch-aware | **86,60%** |
+| Cobertura branch-aware | **84,63%** |
 | Evals de grounding | **10/10** |
 | False accepts | **0** |
 | Testes frontend | **7 aprovados** |

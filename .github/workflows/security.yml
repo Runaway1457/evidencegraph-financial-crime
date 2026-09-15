@@ -38,14 +38,18 @@ jobs:
         with:
           category: "/language:${{ matrix.language }}"
 
-  dependency-review:
-    if: github.event_name == 'pull_request'
+  python-audit:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/dependency-review-action@v4
+      - uses: actions/setup-python@v6
         with:
-          fail-on-severity: high
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install locked dependencies
+        run: uv sync --locked --extra dev
+      - name: Audit Python environment
+        run: uv run pip-audit --local
