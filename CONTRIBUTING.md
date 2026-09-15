@@ -23,6 +23,20 @@ docs(adr): record graph projection boundary
 
 A change is not complete because a happy-path demo works. It must include relevant failure behavior, authorization, auditability, observability, tests, migration/deployment impact, and documentation.
 
+## Authorial standard
+
+Repository communication must sound like engineering work owned by its author, not generated collateral.
+
+- Do not describe the system as a “portfolio project” or claim seniority in prose.
+- Do not use generic superlatives, invented adoption metrics, decorative architecture, or badge walls.
+- State implemented behavior, measured quality and known limitations precisely.
+- Keep README claims synchronized with executable tests, migrations and runtime paths.
+- Record consequential trade-offs in ADRs so technical judgment remains reviewable.
+- Prefer a small number of information-dense diagrams and real product captures.
+- Remove template residue, placeholder identities and dead configuration before review.
+
 ## AI-assisted contributions
 
-AI assistance is permitted, but the contributor remains accountable for every line. Generated output must be reviewed, tested, licensed appropriately, and free of sensitive information.
+AI assistance is permitted as an engineering tool. It is never accepted as authorship, evidence or review. The contributor remains accountable for every line and decision; suggested output must be understood, edited into the repository's own voice, tested, licensed appropriately and kept free of sensitive information.
+
+See [Engineering standard](docs/engineering-standard.md) for the repository-wide evidence and communication contract.

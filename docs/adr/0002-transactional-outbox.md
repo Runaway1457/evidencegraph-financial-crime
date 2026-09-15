@@ -1,22 +1,31 @@
-# ADR 0002: Transactional outbox for workflow dispatch
+# ADR-0002: Commit workflow intent before dispatch
 
-- Status: Accepted
+- Status: accepted
 - Date: 2026-09-14
 
 ## Context
 
-Creating an investigation run in PostgreSQL and starting a Temporal workflow are two writes to different systems. A process crash between them can create a committed run that never starts, or a retry can start the workflow more than once.
+Creating an investigation run and invoking a worker are separate effects. Directly calling a workflow runtime after a PostgreSQL commit leaves a crash window: a durable run may never start, while blind retries may execute the same investigation more than once.
 
 ## Decision
 
-The API writes `investigation_runs`, `workflow_outbox`, and the audit event in one database transaction. A separate dispatcher leases pending messages with `FOR UPDATE SKIP LOCKED`, uses the run ID as Temporal's deterministic workflow ID, and marks the message dispatched only after Temporal accepts it.
+The API writes the investigation run, `investigation.requested` outbox message and audit event in one PostgreSQL transaction, then returns `202 Accepted` with the run ID.
 
-Dispatch is at-least-once. Workflow start and every state-changing activity must therefore be idempotent. Messages use exponential retry and move to a dead-letter state after the configured attempt limit.
+A separate worker:
+
+1. leases pending messages with `FOR UPDATE SKIP LOCKED`;
+2. marks the run as running;
+3. invokes the investigator through the application service;
+4. relies on canonical finding signatures and a database unique constraint for idempotency;
+5. marks the message dispatched only after the use case completes;
+6. applies exponential retry and explicit dead-letter state on failure.
+
+The reference deployment runs this worker directly. Temporal remains an optional future dispatcher adapter; it is not required for the verified path.
 
 ## Consequences
 
-- Database commit no longer depends on Temporal availability.
-- Recovery is observable and replayable.
-- Dispatcher concurrency is safe across replicas.
-- Operations must monitor backlog age, retry rate, and dead letters.
-- Exactly-once delivery is not claimed; effects are made idempotent.
+- Database commit does not depend on worker availability.
+- Queue state and retry history remain inspectable in PostgreSQL.
+- At-least-once delivery does not duplicate findings.
+- Operators can identify dead-letter runs instead of losing work silently.
+- The database carries queue load; a higher-scale deployment may project messages to a dedicated workflow runtime without changing the API contract.

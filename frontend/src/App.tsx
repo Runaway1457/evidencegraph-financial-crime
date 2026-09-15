@@ -20,12 +20,14 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { getInvestigationRun, listCases, startInvestigation } from "./api";
 import { CaseQueue } from "./CaseQueue";
 import { CommandPalette } from "./CommandPalette";
-import { edges } from "./demo";
+import { demoCaseQueue, edges } from "./demo";
 import { EvidenceInspector } from "./EvidenceInspector";
 import { GraphCanvas } from "./GraphCanvas";
 import { Timeline } from "./Timeline";
+import type { CaseQueueItem } from "./types";
 
 const nav = [
   [LayoutDashboard, "Command center"],
@@ -38,13 +40,7 @@ const nav = [
   [BriefcaseBusiness, "Reports"],
 ] as const;
 
-const caseNames: Record<string, string> = {
-  "EG-2026-0147": "Project Meridian",
-  "EG-2026-0139": "Northstar",
-  "EG-2026-0128": "Amber Route",
-};
-
-type RunStatus = "ready" | "queued";
+type RunStatus = "ready" | "queued" | "running" | "failed";
 
 function Sidebar() {
   return (
@@ -115,22 +111,22 @@ function Topbar({
           onClick={onRun}
           type="button"
         >
-          {runStatus === "queued" ? <Activity size={14} /> : <Play fill="currentColor" size={13} />}
-          {runStatus === "queued" ? "Investigation queued" : "Run investigation"}
+          {runStatus !== "ready" ? <Activity size={14} /> : <Play fill="currentColor" size={13} />}
+          {runStatus === "queued" ? "Investigation queued" : runStatus === "running" ? "Investigation running" : runStatus === "failed" ? "Run failed" : "Run investigation"}
         </button>
       </div>
     </header>
   );
 }
 
-function CaseHeader({ caseId }: { caseId: string }) {
+function CaseHeader({ item }: { item: CaseQueueItem }) {
   return (
     <section className="case-header">
       <div className="case-copy">
-        <div className="eyebrow"><span>ACTIVE INVESTIGATION</span><code>{caseId}</code></div>
+        <div className="eyebrow"><span>ACTIVE INVESTIGATION</span><code>{item.id}</code></div>
         <div className="title-row">
           <FolderKanban size={27} />
-          <h1>{caseNames[caseId] ?? "Investigation"}</h1>
+          <h1>{item.name}</h1>
           <span className="risk-label">High risk</span>
           <span className="status-label"><CheckCircle2 size={12} /> Active</span>
           <span className="tag">AML</span><span className="tag">Sanctions</span>
@@ -139,13 +135,13 @@ function CaseHeader({ caseId }: { caseId: string }) {
         <div className="case-stats">
           <span><strong>42</strong> entities</span><i />
           <span><strong>118</strong> relationships</span><i />
-          <span><strong>29</strong> verified evidence items</span>
+          <span><strong>{item.evidenceCount ?? 29}</strong> verified evidence items</span>
         </div>
       </div>
       <div className="case-meta">
         <div className="risk-score">
           <span>Composite risk</span>
-          <strong>87<small>/100</small></strong>
+          <strong>{item.risk ?? "—"}<small>/100</small></strong>
           <em>+12 this week</em>
         </div>
         <div>
@@ -200,10 +196,53 @@ function Copilot() {
 }
 
 export function App() {
+  const demoMode = import.meta.env.VITE_DEMO_MODE === "true";
   const [selectedEdgeId, setSelectedEdgeId] = useState("e3");
-  const [activeCaseId, setActiveCaseId] = useState("EG-2026-0147");
+  const [cases, setCases] = useState<readonly CaseQueueItem[]>(demoMode ? demoCaseQueue : []);
+  const [activeCaseId, setActiveCaseId] = useState(
+    demoMode ? (demoCaseQueue[0]?.id ?? "") : "",
+  );
+  const [controlPlaneError, setControlPlaneError] = useState<string | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [runStatus, setRunStatus] = useState<RunStatus>("ready");
+  const [runId, setRunId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (demoMode) return;
+    void listCases()
+      .then((items) => {
+        const queue = items.map((item) => ({
+          id: item.id,
+          name: item.title,
+          cue: item.description || "Evidence-led investigation",
+          risk: null,
+          age: `v${item.version}`,
+          evidenceCount: item.evidence_count,
+        }));
+        setCases(queue);
+        setActiveCaseId((current) => current || queue[0]?.id || "");
+      })
+      .catch(() => setControlPlaneError("Control plane unavailable — live data was not substituted."));
+  }, [demoMode]);
+
+  useEffect(() => {
+    if (!runId || demoMode) return;
+    const timer = window.setInterval(() => {
+      void getInvestigationRun(runId)
+        .then((run) => {
+          setRunStatus(run.status === "completed" ? "ready" : run.status);
+          if (run.status === "completed" || run.status === "failed") {
+            window.clearInterval(timer);
+            setRunId(null);
+          }
+        })
+        .catch(() => {
+          setControlPlaneError("Run status could not be verified.");
+          window.clearInterval(timer);
+        });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [demoMode, runId]);
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -220,6 +259,23 @@ export function App() {
 
   const selectedEdge = edges.find((edge) => edge.id === selectedEdgeId);
   if (!selectedEdge) throw new Error(`Unknown selected relationship: ${selectedEdgeId}`);
+  const activeCase = cases.find((item) => item.id === activeCaseId) ?? cases[0];
+
+  const runInvestigation = () => {
+    if (demoMode) {
+      setRunStatus("queued");
+      return;
+    }
+    if (!activeCase) return;
+    setRunStatus("queued");
+    setControlPlaneError(null);
+    void startInvestigation(activeCase.id)
+      .then((run) => setRunId(run.id))
+      .catch(() => {
+        setRunStatus("failed");
+        setControlPlaneError("Investigation request was not accepted by the control plane.");
+      });
+  };
 
   return (
     <div className="app-shell">
@@ -228,13 +284,14 @@ export function App() {
         <Topbar
           caseId={activeCaseId}
           onOpenCommand={() => setCommandOpen(true)}
-          onRun={() => setRunStatus("queued")}
+          onRun={runInvestigation}
           runStatus={runStatus}
         />
         <main>
-          <CaseHeader caseId={activeCaseId} />
+          {controlPlaneError ? <div className="control-plane-error" role="alert">{controlPlaneError}</div> : null}
+          {activeCase ? <CaseHeader item={activeCase} /> : <div className="empty-state">No cases available.</div>}
           <div className="investigation-grid">
-            <CaseQueue activeCaseId={activeCaseId} onSelectCase={setActiveCaseId} />
+            <CaseQueue cases={cases} activeCaseId={activeCaseId} onSelectCase={setActiveCaseId} />
             <GraphCanvas selectedEdgeId={selectedEdgeId} onSelectEdge={setSelectedEdgeId} />
             <EvidenceInspector edge={selectedEdge} />
             <Timeline />

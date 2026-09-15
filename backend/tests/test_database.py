@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy import Engine, create_engine, event, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -58,7 +59,9 @@ def finding(case_id: str, finding_id: str) -> FindingTable:
         rationale="Grounded synthetic rationale",
         status="proposed",
         confidence=0.9,
-        proposed_by="agent_1",
+        proposed_by="analyst_1",
+        generated_by="agent_1",
+        signature_sha256="b" * 64,
     )
 
 
@@ -107,3 +110,12 @@ def test_cross_case_evidence_reference_is_rejected_by_database() -> None:
             session.rollback()
         else:
             raise AssertionError("cross-case evidence link unexpectedly succeeded")
+
+
+def test_duplicate_finding_signature_is_rejected_within_a_case() -> None:
+    engine = sqlite_engine()
+    with Session(engine) as session:
+        session.add(case("case_1"))
+        session.add_all((finding("case_1", "finding_1"), finding("case_1", "finding_2")))
+        with pytest.raises(IntegrityError):
+            session.commit()

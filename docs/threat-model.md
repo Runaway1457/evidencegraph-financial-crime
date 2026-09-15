@@ -2,33 +2,42 @@
 
 ## Scope
 
-EvidenceGraph processes synthetic financial transactions, corporate records, blockchain events, analyst notes, and uploaded documents. The model covers the application, workers, object storage, database, policy engine, graph projections, model providers, telemetry, and investigator browser.
+The verified reference path covers synthetic case data, binary evidence ingestion, a PostgreSQL ledger, an atomic local object store, OPA authorization, asynchronous investigation runs, a deterministic investigator and the browser workbench.
+
+OIDC/JWKS, S3, malware scanning, OCR, PII redaction, external model providers and Temporal are extension boundaries and are not treated as deployed controls.
 
 ## Protected assets
 
-- Original evidence bytes and integrity digests
-- Chain-of-custody and append-only audit events
-- Case membership, relationships, hypotheses, and review decisions
-- Investigator identity, role, and authorization context
-- Prompt/model inputs, outputs, traces, and evaluation datasets
-- Encryption, OIDC, storage, and provider credentials
+- Original evidence bytes and canonical digests
+- Chain-of-custody and case audit events
+- Case-local entities, relationships, hypotheses and review decisions
+- Investigator identity and policy context
+- Outbox messages, run status and idempotency signatures
+- Authentication, database and policy credentials
 
-## High-priority threats and controls
+## High-priority threats
 
-| Threat | Boundary | Primary controls | Verification |
-| --- | --- | --- | --- |
-| Evidence tampering | upload → storage → ledger | streaming hash, immutable object key, custody event, re-verification | integrity tests |
-| Unsupported AI claim | model → application | structured schema, citation validation, same-case constraints, human review | adversarial evals |
-| Prompt injection in documents | document → OCR/model | content treated as data, tool allowlist, policy check, separated instructions | injection corpus |
-| Cross-case data exposure | API/graph/storage | tenant/case scope in queries, composite constraints, object prefix policy | authorization tests |
-| Privilege escalation | browser/API → OIDC/OPA | PKCE, validated issuer/audience, short-lived tokens, OPA fail-closed | contract/security tests |
-| Duplicate workflow effects | outbox → Temporal → worker | deterministic workflow IDs, idempotency keys, unique database constraints | retry tests |
-| Sensitive traces | application → telemetry | PII redaction before tracing, sensitive trace payloads disabled | telemetry tests |
-| Audit deletion/rewrite | database/operator | append-only permissions, hash chain, external retention/export | chain verification |
+| Threat | Boundary | Enforced controls | Verification |
+|---|---|---|---|
+| Oversized or malicious upload | client → API | content-length precheck, streamed byte cap, edge body/rate limit, opaque object key | API negative tests |
+| Path traversal | API → object store | server-generated key and resolved-root containment | object-store negative test |
+| Evidence tampering | storage → ledger | canonical SHA-256, atomic write, custody event, chained case audit | domain and SQL tests |
+| Unsupported finding | investigator → application | structured proposal, citation validation, same-case FKs, terminal human review | adversarial evals and service tests |
+| Self-approval | analyst → review | human requester persisted separately from generating agent; domain and SQL constraint | domain/API tests |
+| Lost concurrent decision | service → PostgreSQL | optimistic case version and compare-and-set update | stale-writer test |
+| Duplicate retry effect | worker → finding | canonical signature plus case-local unique constraint | dispatcher and SQL tests |
+| Lost workflow request | API → worker | run and outbox committed together, lease, retry and dead letter | outbox/dispatcher tests |
+| Forged identity | client → API | signed JWT algorithm, signature, issuer, audience, time and subject validation | identity tests |
+| Policy bypass on outage | API → OPA | fail-closed policy client | policy tests |
+| Audit rewrite | application/operator → database | ORM mutation guards, PostgreSQL update/delete triggers, chained hashes | persistence test and migration smoke |
+| Sensitive error leakage | service → client/log | generic external errors, request IDs and structured route logs | API tests |
 
-## Trust assumptions
+## Residual risk
 
-- Root/cloud/database administrators remain privileged and require organizational controls outside this repository.
-- Third-party model and identity providers are independently governed.
-- No automated finding is a regulatory filing or legal conclusion.
-- Real deployment requires institution-specific AML validation, data residency analysis, retention policy, incident response, and model-risk approval.
+- A database or host administrator remains privileged; external immutable retention and organizational controls are still required.
+- HS256 is appropriate for the contained reference profile but not a substitute for institutional OIDC/JWKS key rotation and claims governance.
+- The local object store does not provide bucket retention, malware scanning, encryption key separation or regional replication.
+- The deterministic baseline finds a narrow two-hop pattern; it is not an AML model, regulatory decision or legal conclusion.
+- Graph and evidence detail panels remain synthetic until projection endpoints replace the explicit demo fixture.
+
+Real financial data requires institution-specific AML validation, data residency, retention, incident response, model-risk approval and privacy controls.

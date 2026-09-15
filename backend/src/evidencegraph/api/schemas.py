@@ -2,7 +2,15 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from evidencegraph.domain.models import CaseStatus, EvidenceType, Finding, FindingStatus
+from evidencegraph.domain.models import (
+    CaseStatus,
+    CaseSummary,
+    EvidenceType,
+    Finding,
+    FindingStatus,
+    InvestigationRun,
+    InvestigationRunStatus,
+)
 
 
 class CreateCaseRequest(BaseModel):
@@ -22,9 +30,13 @@ class EvidenceResponse(BaseModel):
     ingested_by: str
     ingested_at: datetime
     page: int | None
+    media_type: str
+    size_bytes: int
 
 
 class CaseResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     title: str
     description: str
@@ -32,13 +44,16 @@ class CaseResponse(BaseModel):
     created_at: datetime
     status: CaseStatus
     evidence_count: int
+    version: int
 
     @classmethod
     def from_domain(cls, case: object) -> "CaseResponse":
         from evidencegraph.domain.models import InvestigationCase
 
+        if isinstance(case, CaseSummary):
+            return cls.model_validate(case)
         if not isinstance(case, InvestigationCase):
-            raise TypeError("expected InvestigationCase")
+            raise TypeError("expected InvestigationCase or CaseSummary")
         return cls(
             id=case.id,
             title=case.title,
@@ -47,6 +62,7 @@ class CaseResponse(BaseModel):
             created_at=case.created_at,
             status=case.status,
             evidence_count=len(case.evidence),
+            version=case.version,
         )
 
 
@@ -64,6 +80,7 @@ class FindingResponse(BaseModel):
     status: FindingStatus
     confidence: float
     proposed_by: str
+    generated_by: str
     proposed_at: datetime
     reviewed_by: str | None
     reviewed_at: datetime | None
@@ -79,6 +96,7 @@ class FindingResponse(BaseModel):
             status=finding.status,
             confidence=finding.confidence,
             proposed_by=finding.proposed_by,
+            generated_by=finding.generated_by,
             proposed_at=finding.proposed_at,
             reviewed_by=finding.reviewed_by,
             reviewed_at=finding.reviewed_at,
@@ -87,3 +105,20 @@ class FindingResponse(BaseModel):
 
 class ReviewFindingRequest(BaseModel):
     decision: FindingStatus
+
+
+class InvestigationRunResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    case_id: str
+    status: InvestigationRunStatus
+    requested_by: str
+    requested_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+    error_code: str | None
+
+    @classmethod
+    def from_domain(cls, run: InvestigationRun) -> "InvestigationRunResponse":
+        return cls.model_validate(run)

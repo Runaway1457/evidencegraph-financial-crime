@@ -4,12 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "evidencegraph-financial-crime"
-version = "0.2.0"
+version = "0.3.0"
 description = "Evidence-first financial-crime investigation platform"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Gabriel" }]
+authors = [{ name = "Gabriel Borges" }]
 dependencies = [
   "alembic>=1.16,<2",
   "fastapi>=0.116,<1",
@@ -21,6 +21,11 @@ dependencies = [
   "structlog>=25.4,<26",
   "uvicorn[standard]>=0.35,<1",
 ]
+
+[project.urls]
+Repository = "https://github.com/Runaway1457/evidencegraph-financial-crime"
+Documentation = "https://github.com/Runaway1457/evidencegraph-financial-crime/tree/main/docs"
+Engineering-Hub = "https://gabriel-engineering-hub.nagatoimoveis.chatgpt.site"
 
 [project.optional-dependencies]
 dev = [

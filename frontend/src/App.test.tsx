@@ -1,9 +1,14 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { App } from "./App";
 
 describe("investigation workspace", () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+  });
+
   it("renders evidence grounding, governance, and review state", () => {
     render(<App />);
 
@@ -78,5 +83,36 @@ describe("investigation workspace", () => {
       "aria-current",
       "page",
     );
+  });
+
+  it("binds live case summaries without substituting demo data", async () => {
+    vi.stubEnv("VITE_DEMO_MODE", "false");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve([
+          {
+            id: "case_live",
+            title: "Live control-plane case",
+            description: "Loaded from FastAPI",
+            status: "open",
+            evidence_count: 7,
+            version: 3,
+          },
+        ]),
+      }),
+    );
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Live control-plane case" })).toBeInTheDocument(),
+    );
+    expect(
+      screen.getByText((_, element) => element?.textContent === "7 verified evidence items"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Project Meridian")).not.toBeInTheDocument();
   });
 });

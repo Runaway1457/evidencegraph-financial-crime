@@ -44,6 +44,24 @@ code, kbd { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospac
     var(--canvas);
 }
 
+.control-plane-error,
+.empty-state {
+  margin: 14px 18px 0;
+  border: 1px solid rgba(255, 105, 120, 0.35);
+  border-radius: 10px;
+  background: rgba(98, 26, 36, 0.34);
+  color: #ffb7bf;
+  padding: 10px 14px;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+.empty-state {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--muted);
+}
+
 .sidebar {
   z-index: 5;
   height: 100vh;
@@ -365,7 +383,7 @@ h1 { font-size: 25px; line-height: 1; letter-spacing: -.7px; margin: 0 4px 0 0; 
   overflow: hidden;
 }
 .graph-stage::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 80px rgb(0 0 0 / 26%); }
-.graph-stage > svg { width: 100%; height: 100%; min-height: 430px; }
+.graph-stage svg { width: 100%; height: 100%; min-height: 430px; }
 .graph-stage-meta { position: absolute; z-index: 3; top: 10px; right: 12px; display: flex; gap: 10px; color: #718197; font-size: 7px; }
 .graph-stage-meta span { display: flex; align-items: center; gap: 5px; }
 .graph-stage-meta span:first-child { color: #9babbd; }

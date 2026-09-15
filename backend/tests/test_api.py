@@ -12,17 +12,21 @@ from evidencegraph.domain.models import (
     utc_now,
 )
 from evidencegraph.infrastructure.memory import InMemoryCaseRepository
+from evidencegraph.infrastructure.object_store import InMemoryObjectStore
 
 repository = InMemoryCaseRepository()
+object_store = InMemoryObjectStore()
 app = create_app(
-    settings_override=Settings(environment="test"),
+    settings_override=Settings(environment="test", max_upload_bytes=16),
     repository_override=repository,
+    object_store_override=object_store,
 )
 client = TestClient(app)
 
 
 def setup_function() -> None:
     repository._cases.clear()
+    object_store.objects.clear()
 
 
 def test_health_and_readiness() -> None:
@@ -30,6 +34,7 @@ def test_health_and_readiness() -> None:
     ready = client.get("/health/ready")
     assert live.status_code == 200
     assert live.json()["status"] == "ok"
+    assert live.headers["X-Request-ID"]
     assert ready.status_code == 200
     assert ready.json()["status"] == "ready"
 
@@ -52,6 +57,41 @@ def test_unknown_case_does_not_leak_details() -> None:
     response = client.get("/api/v1/cases/not-real")
     assert response.status_code == 404
     assert response.json() == {"detail": "case not found"}
+
+
+def test_binary_evidence_ingestion_is_bounded_stored_and_ledgered() -> None:
+    created = client.post(
+        "/api/v1/cases",
+        headers={"X-Actor-ID": "analyst_1"},
+        json={"title": "Project Meridian", "description": "Synthetic investigation"},
+    )
+    case_id = created.json()["id"]
+
+    response = client.post(
+        f"/api/v1/cases/{case_id}/evidence",
+        params={"evidence_type": "document", "source": "analyst upload"},
+        headers={"X-Actor-ID": "analyst_1", "Content-Type": "application/pdf"},
+        content=b"verified bytes",
+    )
+
+    assert response.status_code == 201
+    assert response.json()["size_bytes"] == 14
+    assert object_store.objects[response.json()["storage_key"]] == b"verified bytes"
+    assert repository.get(case_id).evidence[0].id == response.json()["id"]
+
+
+def test_binary_evidence_ingestion_rejects_oversized_payload() -> None:
+    created = client.post(
+        "/api/v1/cases",
+        json={"title": "Project Meridian", "description": ""},
+    )
+    response = client.post(
+        f"/api/v1/cases/{created.json()['id']}/evidence",
+        params={"evidence_type": "document", "source": "upload"},
+        content=b"x" * 17,
+    )
+    assert response.status_code == 413
+    assert object_store.objects == {}
 
 
 def _seed_grounded_case() -> InvestigationCase:
@@ -120,14 +160,17 @@ def test_governed_investigate_review_and_list_flow() -> None:
         "/api/v1/cases/case_1/investigations",
         headers={"X-Actor-ID": "analyst_1"},
     )
-    assert investigation.status_code == 200
-    assert len(investigation.json()) == 1
-    finding_id = investigation.json()[0]["id"]
-    assert investigation.json()[0]["status"] == "proposed"
+    assert investigation.status_code == 202
+    assert investigation.json()["status"] == "queued"
+    run_id = investigation.json()["id"]
+    assert client.get(f"/api/v1/investigation-runs/{run_id}").json()["status"] == "queued"
+
+    finding = app.state.investigation_service.run(case_id="case_1", actor_id="analyst_1")[0]
+    finding_id = finding.id
 
     self_review = client.post(
         f"/api/v1/cases/case_1/findings/{finding_id}/review",
-        headers={"X-Actor-ID": "deterministic-investigator-v1"},
+        headers={"X-Actor-ID": "analyst_1"},
         json={"decision": "confirmed"},
     )
     assert self_review.status_code == 422
