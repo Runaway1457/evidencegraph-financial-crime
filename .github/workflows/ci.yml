@@ -43,7 +43,7 @@ jobs:
       - name: Migration smoke and drift check
         run: uv run alembic upgrade head && uv run alembic check
       - name: Upload quality evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: backend-quality
           path: |
@@ -76,7 +76,7 @@ jobs:
       - name: Build
         run: npm run build
       - name: Upload production bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-dist
           path: frontend/dist
@@ -98,7 +98,7 @@ jobs:
             http://127.0.0.1:4173
           test -s ../docs/assets/investigation-workbench.png
       - name: Upload verified UI
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: verified-ui
           path: docs/assets/investigation-workbench.png
