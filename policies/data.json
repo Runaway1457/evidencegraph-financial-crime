@@ -1,0 +1,14 @@
+{
+  "identity": {
+    "assignments": {
+      "analyst_1": {
+        "role": "investigator",
+        "cases": ["case_1"]
+      },
+      "reviewer_2": {
+        "role": "reviewer",
+        "cases": ["case_1"]
+      }
+    }
+  }
+}

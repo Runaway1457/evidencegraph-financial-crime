@@ -1,0 +1,105 @@
+name: evidencegraph
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: evidencegraph
+      POSTGRES_USER: evidencegraph
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-only-change-me}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evidencegraph -d evidencegraph"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks: [data]
+
+  opa:
+    image: openpolicyagent/opa:1.8.0-static
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies"]
+    volumes:
+      - ../policies:/policies:ro
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    networks: [control]
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: deployment/docker/backend.Dockerfile
+    command: ["alembic", "upgrade", "head"]
+    environment:
+      EG_DATABASE_URL: postgresql+psycopg://evidencegraph:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/evidencegraph
+      EG_ENVIRONMENT: production
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [data]
+    restart: "no"
+
+  seed:
+    build:
+      context: ..
+      dockerfile: deployment/docker/backend.Dockerfile
+    command: ["python", "scripts/seed_demo.py"]
+    environment:
+      EG_DATABASE_URL: postgresql+psycopg://evidencegraph:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/evidencegraph
+      EG_ENVIRONMENT: production
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [data]
+    restart: "no"
+
+  api:
+    build:
+      context: ..
+      dockerfile: deployment/docker/backend.Dockerfile
+    environment:
+      EG_DATABASE_URL: postgresql+psycopg://evidencegraph:${POSTGRES_PASSWORD:-local-only-change-me}@db:5432/evidencegraph
+      EG_ENVIRONMENT: production
+      EG_AUTH_MODE: development
+      EG_OPA_URL: http://opa:8181
+      EG_CORS_ORIGINS: '["http://localhost:8080"]'
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      opa:
+        condition: service_started
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    networks: [data, control, edge]
+
+  web:
+    build:
+      context: ..
+      dockerfile: deployment/docker/frontend.Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+      - /var/cache/nginx:size=16m,noexec,nosuid
+      - /var/run:size=1m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    networks: [edge]
+
+volumes:
+  postgres-data:
+
+networks:
+  edge:
+  control:
+    internal: true
+  data:
+    internal: true
