@@ -156,6 +156,23 @@ Expected readiness response:
 {"status":"ready","version":"0.2.0"}
 ```
 
+Run the seeded evidence-backed investigation and complete independent review:
+
+```bash
+curl --fail --request POST \
+  -H 'X-Actor-ID: analyst_1' \
+  http://localhost:8080/api/v1/cases/case_1/investigations \
+  | tee investigation.json
+
+FINDING_ID="$(python -c 'import json; print(json.load(open("investigation.json"))[0]["id"])')"
+
+curl --fail --request POST \
+  -H 'Content-Type: application/json' \
+  -H 'X-Actor-ID: reviewer_2' \
+  -d '{"decision":"confirmed"}' \
+  "http://localhost:8080/api/v1/cases/case_1/findings/$FINDING_ID/review"
+```
+
 Stop and remove demo data:
 
 ```bash
@@ -182,8 +199,8 @@ These are release-branch results, produced by GitHub Actions rather than handwri
 
 | Gate | Verified result |
 |---|---:|
-| Backend test suite | **33 passed** |
-| Backend branch-aware coverage | **91%** |
+| Backend test suite | **34 passed** |
+| Backend branch-aware coverage | **90.76%** |
 | Frontend test suite | **6 passed** |
 | Frontend statements / lines | **97.92% / 97.92%** |
 | Frontend branch coverage | **91.22%** |
@@ -192,7 +209,7 @@ These are release-branch results, produced by GitHub Actions rather than handwri
 | OPA policy tests | **4 passed** |
 | Schema drift | **None** via `alembic check` |
 | Production dependency audit | **No high-severity runtime finding** |
-| Container smoke | **PostgreSQL + migration + OPA + API + web passed** |
+| Container smoke | **Seed + PostgreSQL + migration + OPA + API + web + governed review passed** |
 
 Every push gates linting, formatting, strict typing, unit/integration tests, branch coverage, adversarial grounding evals, policy tests, migration drift, locked frontend installation, dependency audit, production build, verified UI capture, Compose model validation, and full-stack smoke testing.
 
@@ -249,6 +266,8 @@ See [SECURITY.md](SECURITY.md) and the [threat model](docs/threat-model.md).
 | [Model card](docs/model-card.md) | Intended use, safeguards and AI limitations |
 | [Data card](docs/data-card.md) | Synthetic dataset provenance and restrictions |
 | [Operations runbook](docs/runbook.md) | Recovery, degraded modes and incident procedures |
+| [Release checklist](docs/release-checklist.md) | Evidence required before publication |
+| [Launch kit](docs/launch-kit.md) | Bilingual posts, carousel and demo script |
 | [Contributing](CONTRIBUTING.md) | Quality bar and definition of done |
 
 ## Design principles
