@@ -126,7 +126,7 @@ def create_app(
             ) from exc
 
     @application.get(
-        f"{settings.api_prefix}/cases/{case_id}/findings",
+        f"{settings.api_prefix}/cases/{{case_id}}/findings",
         response_model=list[FindingResponse],
         tags=["investigations"],
     )
@@ -141,7 +141,7 @@ def create_app(
         return [FindingResponse.from_domain(item) for item in case.findings]
 
     @application.post(
-        f"{settings.api_prefix}/cases/{case_id}/investigations",
+        f"{settings.api_prefix}/cases/{{case_id}}/investigations",
         response_model=list[FindingResponse],
         tags=["investigations"],
     )
@@ -152,9 +152,15 @@ def create_app(
         try:
             findings = investigation_service.run(case_id=case_id, actor_id=actor)
         except AuthorizationDeniedError as exc:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="policy denied") from exc
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="policy denied",
+            ) from exc
         except NotFoundError as exc:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="case not found") from exc
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="case not found",
+            ) from exc
         except DomainError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -163,7 +169,7 @@ def create_app(
         return [FindingResponse.from_domain(item) for item in findings]
 
     @application.post(
-        f"{settings.api_prefix}/cases/{case_id}/findings/{finding_id}/review",
+        f"{settings.api_prefix}/cases/{{case_id}}/findings/{{finding_id}}/review",
         response_model=FindingResponse,
         tags=["investigations"],
     )
@@ -181,9 +187,15 @@ def create_app(
                 decision=payload.decision,
             )
         except AuthorizationDeniedError as exc:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="policy denied") from exc
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="policy denied",
+            ) from exc
         except NotFoundError as exc:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="finding not found") from exc
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="finding not found",
+            ) from exc
         except DomainError as exc:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
