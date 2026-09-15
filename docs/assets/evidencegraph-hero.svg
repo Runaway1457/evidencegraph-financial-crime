@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="720" viewBox="0 0 1600 720" role="img" aria-labelledby="title desc">
+  <title id="title">EvidenceGraph Financial Crime</title>
+  <desc id="desc">Evidence-first AI investigation platform with graph reasoning, governed agents and human accountability.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07111c"/><stop offset="1" stop-color="#0b1824"/></linearGradient>
+    <linearGradient id="cyan" x1="0" x2="1"><stop stop-color="#42d8ff"/><stop offset="1" stop-color="#36e6af"/></linearGradient>
+    <linearGradient id="amber" x1="0" x2="1"><stop stop-color="#ffcc66"/><stop offset="1" stop-color="#ff8a4c"/></linearGradient>
+    <radialGradient id="halo"><stop stop-color="#42d8ff" stop-opacity=".25"/><stop offset="1" stop-color="#42d8ff" stop-opacity="0"/></radialGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse"><path d="M42 0H0V42" fill="none" stroke="#173149" stroke-width="1" opacity=".45"/></pattern>
+  </defs>
+  <rect width="1600" height="720" rx="28" fill="url(#bg)"/>
+  <rect width="1600" height="720" rx="28" fill="url(#grid)"/>
+  <circle cx="1250" cy="345" r="430" fill="url(#halo)"/>
+  <rect x="58" y="48" width="1484" height="624" rx="22" fill="none" stroke="#23435b"/>
+  <g font-family="Inter,Segoe UI,Arial,sans-serif">
+    <g transform="translate(92 86)">
+      <rect width="46" height="46" rx="12" fill="#102638" stroke="#42d8ff"/>
+      <path d="M23 9l12 7v14l-12 7-12-7V16z" fill="none" stroke="#42d8ff" stroke-width="2"/>
+      <circle cx="23" cy="23" r="5" fill="#36e6af"/>
+      <text x="64" y="21" fill="#eaf6ff" font-size="20" font-weight="700" letter-spacing="2">EVIDENCEGRAPH</text>
+      <text x="64" y="43" fill="#7f96aa" font-size="13" letter-spacing="3">FINANCIAL CRIME OS</text>
+    </g>
+    <g transform="translate(92 210)">
+      <text fill="#eaf6ff" font-size="68" font-weight="750">AI investigations that</text>
+      <text y="82" fill="url(#cyan)" font-size="68" font-weight="750">survive scrutiny.</text>
+      <text y="144" fill="#9aafc2" font-size="24">Evidence-first graph reasoning for high-risk financial crime decisions.</text>
+      <text y="184" fill="#9aafc2" font-size="24">Traceable claims. Policy-bound actions. Independent review.</text>
+    </g>
+    <g transform="translate(92 486)">
+      <g><rect width="244" height="66" rx="12" fill="#0d2130" stroke="#22526b"/><text x="20" y="28" fill="#42d8ff" font-size="13" font-weight="700" letter-spacing="1.5">QUALITY GATE</text><text x="20" y="51" fill="#eaf6ff" font-size="18" font-weight="700">90.76% branch coverage</text></g>
+      <g transform="translate(260)"><rect width="206" height="66" rx="12" fill="#0d2130" stroke="#22526b"/><text x="20" y="28" fill="#36e6af" font-size="13" font-weight="700" letter-spacing="1.5">GROUNDING</text><text x="20" y="51" fill="#eaf6ff" font-size="18" font-weight="700">10 / 10 evals</text></g>
+      <g transform="translate(482)"><rect width="224" height="66" rx="12" fill="#0d2130" stroke="#22526b"/><text x="20" y="28" fill="#ffb44c" font-size="13" font-weight="700" letter-spacing="1.5">GOVERNANCE</text><text x="20" y="51" fill="#eaf6ff" font-size="18" font-weight="700">Four-eyes review</text></g>
+    </g>
+    <g transform="translate(940 150)">
+      <path d="M80 220L220 110L390 178L510 82M220 110L280 330L430 390L560 275M390 178L430 390M280 330L120 430" fill="none" stroke="#2d6a83" stroke-width="3" opacity=".8"/>
+      <path d="M80 220L220 110L390 178" fill="none" stroke="url(#amber)" stroke-width="6" filter="url(#glow)"/>
+      <g fill="#0d2130" stroke-width="4">
+        <circle cx="80" cy="220" r="38" stroke="#42d8ff"/><circle cx="220" cy="110" r="48" stroke="#9c82ff"/><circle cx="390" cy="178" r="42" stroke="#42d8ff"/><circle cx="510" cy="82" r="32" stroke="#ffb44c"/><circle cx="280" cy="330" r="38" stroke="#36e6af"/><circle cx="430" cy="390" r="34" stroke="#ff667a"/><circle cx="560" cy="275" r="38" stroke="#7f96aa"/><circle cx="120" cy="430" r="30" stroke="#36e6af"/>
+      </g>
+      <g fill="#eaf6ff" font-size="18" font-weight="700" text-anchor="middle"><text x="80" y="226">BANK</text><text x="220" y="116">PERSON</text><text x="390" y="184">ENTITY</text><text x="510" y="88">WALLET</text><text x="280" y="336">ACCOUNT</text><text x="430" y="396">RISK</text><text x="560" y="281">MIXER</text><text x="120" y="436">DOC</text></g>
+      <g transform="translate(44 500)"><rect width="560" height="54" rx="27" fill="#0c1d2a" stroke="#2d6a83"/><circle cx="30" cy="27" r="7" fill="#36e6af"/><text x="52" y="34" fill="#b9cbd8" font-size="16">Evidence → graph path → hypothesis → review → finding</text></g>
+    </g>
+    <text x="92" y="624" fill="#60778b" font-size="14" letter-spacing="2">REFERENCE ARCHITECTURE · SYNTHETIC DATA · APACHE-2.0</text>
+    <text x="1508" y="624" fill="#60778b" font-size="14" text-anchor="end">v0.2</text>
+  </g>
+</svg>

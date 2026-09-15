@@ -1,292 +1,324 @@
 <div align="center">
 
+![EvidenceGraph Financial Crime — evidence-first AI investigations](docs/assets/evidencegraph-hero.svg)
+
 # EvidenceGraph Financial Crime
 
-### Evidence-first AI investigation for financial crime
+### A reviewable AI investigation system for high-risk financial crime analysis
 
-A production-shaped reference system for turning fragmented financial records into explainable graph hypotheses — with immutable provenance, deterministic controls, policy enforcement, and independent human review.
+**Graph reasoning · immutable provenance · governed findings · human accountability**
 
 [![CI](https://github.com/Runaway1457/evidencegraph-financial-crime/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Runaway1457/evidencegraph-financial-crime/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
-![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=06121f)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=07111c)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)
-![OPA](https://img.shields.io/badge/policy-OPA-7D5AE6)
-![License](https://img.shields.io/badge/license-Apache--2.0-55c7ff)
+![OPA](https://img.shields.io/badge/Policy-OPA-7D5AE6)
+![Coverage](https://img.shields.io/badge/branch_coverage-90.76%25-21c997)
+![Grounding](https://img.shields.io/badge/grounding_evals-10%2F10-21c997)
+![License](https://img.shields.io/badge/license-Apache--2.0-42d8ff)
 
-[Why it exists](#why-evidencegraph) · [Architecture](#architecture) · [Run it](#run-the-verified-stack) · [Quality evidence](#quality-evidence) · [Documentation](#engineering-record)
+[Product tour](#product-tour) · [Trust model](#trust-model) · [Architecture](#architecture) · [Run locally](#run-the-verified-stack) · [Quality proof](#quality-proof) · [Engineering record](#engineering-record)
 
 </div>
 
-![EvidenceGraph investigation workbench](docs/assets/investigation-workbench.webp)
+---
 
-> The screenshot above is generated from the same production bundle that passes CI. The displayed case and every record in this repository are synthetic.
+EvidenceGraph is a production-shaped reference implementation for transforming fragmented financial records into **evidence-backed graph hypotheses**. It separates model reasoning from institutional truth: AI can propose; deterministic controls, policy and an independent reviewer decide what may be recorded.
+
+> [!IMPORTANT]
+> The repository uses synthetic data only. It demonstrates software and AI engineering controls; it is not a certified AML decision system and is not intended for real financial data without institution-specific validation, identity, security and compliance controls.
 
 ## Why EvidenceGraph
 
-Most AI investigation demos optimize for the answer. Financial-crime systems must optimize for whether the answer can be **proved, reviewed, reproduced, and challenged**.
+Most AI investigation demos optimize for a fluent answer. A serious financial-crime platform must optimize for a conclusion that can be **proved, reproduced, challenged and independently approved**.
 
-EvidenceGraph models that difference directly:
+| Question a reviewer asks | EvidenceGraph answer |
+|---|---|
+| Which source supports this claim? | Every finding references known, case-local evidence IDs. |
+| Was the source altered? | Evidence carries a stable SHA-256 digest and custody events. |
+| How were two entities connected? | The graph returns the cited relationship path, not only an explanation. |
+| Can the model invent a citation? | A fail-closed grounding gate rejects unknown, duplicate or cross-case evidence. |
+| Who authorized the action? | OPA evaluates actor, action, case and obligations. |
+| Can an investigator approve their own proposal? | The four-eyes invariant blocks self-review in the domain model. |
+| What happens after a retry? | Finding signatures and an outbox-backed execution model preserve idempotency. |
 
-```mermaid
-flowchart LR
-  E["Immutable evidence"] --> G["Evidence-backed graph"]
-  G --> H["Bounded hypothesis"]
-  H --> P["Policy + grounding gate"]
-  P --> R["Independent review"]
-  R --> F["Confirmed finding"]
+## Product tour
+
+<p align="center">
+  <img src="docs/assets/product-overview.webp" alt="EvidenceGraph investigation command center" width="100%" />
+</p>
+
+The workbench is designed as a **forensic instrument**, not a chatbot shell. Risk context, graph paths, evidence, material events and unverified AI output remain visible together so an analyst can challenge the reasoning without losing investigative context.
+
+### 1. Multi-hop graph investigation
+
+<p align="center">
+  <img src="docs/assets/graph-investigation.webp" alt="Multi-hop entity graph and risk-prioritized case queue" width="100%" />
+</p>
+
+The graph emphasizes material flows and cited edges. An analyst can inspect beneficial owners, counterparties, wallets, jurisdictions and services without treating spatial proximity as proof.
+
+### 2. Evidence and provenance inspection
+
+<p align="center">
+  <img src="docs/assets/evidence-provenance.webp" alt="Evidence provenance inspector with supporting documents and custody information" width="680" />
+</p>
+
+Each selected relationship exposes its rationale, confidence, source records, digest and custody context. The source remains primary; the model-generated interpretation remains subordinate.
+
+### 3. Governed hypothesis review
+
+<p align="center">
+  <img src="docs/assets/governed-hypothesis.webp" alt="Unverified AI hypothesis beside the material-event timeline" width="100%" />
+</p>
+
+AI output is visibly labeled **unverified**. It becomes a proposed finding only after schema validation, grounding checks and policy authorization, and it becomes confirmed only after independent human review.
+
+## Trust model
+
+![EvidenceGraph trust lifecycle](docs/assets/trust-lifecycle.svg)
+
+The central contract is intentionally stricter than a prompt:
+
+```text
+Evidence → cited graph path → bounded hypothesis → policy + grounding → independent review → finding
 ```
 
-The language model is never the system of record. Agent output enters the application as untrusted structured input; it is validated against case-local evidence before it can become a proposed finding. Confirmation remains a human accountability boundary.
+### Grounding invariants
 
-### What makes this technically different
+Every proposal is rejected unless all conditions hold:
 
-| Concern | Naive AI workflow | EvidenceGraph control |
-|---|---|---|
-| Truth | Model response | PostgreSQL case aggregate + immutable evidence digest |
-| Explainability | Free-form rationale | Finding → evidence IDs → graph path → source metadata |
-| Hallucinated citations | Prompt instruction | Fail-closed grounding gate rejects unknown or duplicate evidence IDs |
-| Authorization | UI role check | OPA decision document, case assignment, explicit obligations |
-| Agent retries | Duplicate writes | Idempotent finding signatures + transactional outbox |
-| Human oversight | Optional feedback | Four-eyes invariant in the domain and relational schema |
-| Auditability | Application logs | SHA-256-linked audit and custody events |
-| Async reliability | Database write then message | Run and outbox event committed atomically |
-| Graph integrity | Best-effort joins | Composite foreign keys prevent cross-case edges and citations |
+1. at least one evidence citation is present;
+2. every cited ID exists in the same case;
+3. duplicate citations are removed or rejected;
+4. confidence is bounded to `[0, 1]`;
+5. the full proposal batch validates before persistence;
+6. the reviewer is not the proposer.
 
-## Investigation workbench
-
-The interface is designed as an analyst instrument rather than a chatbot shell:
-
-- risk-prioritized case queue with material-event context;
-- interactive multi-hop relationship map with evidence provenance;
-- edge-level confidence, rationale, and citation inspection;
-- synchronized investigation timeline;
-- visibly non-authoritative AI hypothesis panel;
-- keyboard command palette with `⌘/Ctrl + K`;
-- responsive layouts, visible focus states, and reduced-motion support.
-
-The UI currently uses a deterministic synthetic fixture so reviewers can reproduce the exact visual state without credentials or regulated data. The FastAPI control plane and relational core are tested independently; live workspace/API binding is tracked as a post-reference integration milestone.
+The model is therefore **not** the system of record. Agent output crosses a trust boundary as untrusted structured input.
 
 ## Architecture
 
-```mermaid
-flowchart TB
-  subgraph Experience["Investigation experience"]
-    UI["React forensic workbench"]
-    API["FastAPI control plane"]
-  end
+![EvidenceGraph system architecture](docs/assets/system-architecture.svg)
 
-  subgraph Trust["Application trust boundary"]
-    CASE["Case aggregate"]
-    GRAPH["Multi-hop graph traversal"]
-    GATE["Grounding + domain invariants"]
-    REVIEW["Four-eyes review"]
-  end
+The codebase follows a ports-and-adapters boundary:
 
-  subgraph Runtime["Governed runtime"]
-    OUTBOX["Transactional outbox"]
-    POLICY["OPA authorization"]
-    BASELINE["Deterministic investigator"]
-  end
+- the **domain layer** owns case state, evidence, graph and review invariants;
+- the **application layer** orchestrates investigation, grounding and authorization;
+- the **infrastructure layer** implements SQLAlchemy persistence, PostgreSQL, OPA and outbox behavior;
+- the **delivery layer** exposes FastAPI and the React investigation workbench.
 
-  subgraph Record["System of record"]
-    PG[("PostgreSQL 17")]
-    LEDGER["Evidence + audit chains"]
-  end
+Infrastructure frameworks do not define business truth. This keeps the evidence model executable in fast tests and makes model providers, graph engines and workflow runtimes replaceable.
 
-  UI --> API
-  API --> CASE
-  CASE --> GRAPH
-  GRAPH --> BASELINE
-  BASELINE --> GATE
-  GATE --> REVIEW
-  CASE --> OUTBOX
-  GATE --> POLICY
-  CASE --> PG
-  REVIEW --> PG
-  PG --> LEDGER
-```
-
-The domain and application layers do not depend on FastAPI, SQLAlchemy, OPA, a graph database, or a model provider. Those capabilities sit behind explicit ports. That keeps the evidence model testable and prevents infrastructure choices from becoming business rules.
-
-### Durable investigation dispatch
+### Reliability: transaction before dispatch
 
 ```mermaid
 sequenceDiagram
-  participant A as Analyst
-  participant DB as PostgreSQL
-  participant D as Dispatcher
-  participant W as Investigator
-  A->>DB: Commit run + outbox event
-  D->>DB: Lease with SKIP LOCKED
-  D->>W: Dispatch with run ID
-  alt accepted
-    W-->>DB: Persist grounded proposal
-    D->>DB: Mark dispatched
-  else unavailable
-    D->>DB: Backoff or dead-letter
-  end
+    autonumber
+    actor Analyst
+    participant API as FastAPI
+    participant DB as PostgreSQL
+    participant O as Workflow outbox
+    participant D as Dispatcher
+    participant I as Investigator
+    participant G as Grounding gate
+    participant P as OPA
+    actor Reviewer
+
+    Analyst->>API: Request investigation
+    API->>DB: BEGIN
+    API->>DB: Create queued run
+    API->>O: Add investigation.requested
+    DB-->>API: COMMIT atomically
+    D->>O: Lease with SKIP LOCKED
+    D->>I: Dispatch using run_id idempotency key
+    I-->>G: Structured proposal + evidence IDs
+    G->>DB: Resolve case-local evidence
+    G->>P: Authorize actor, action and case
+    alt grounded and authorized
+        G->>DB: Persist proposed finding
+        Reviewer->>API: Confirm or reject
+        API->>DB: Enforce independent reviewer
+    else invalid or denied
+        G-->>I: Reject without partial write
+    end
 ```
 
-The implementation includes atomic enqueueing, leasing, bounded retry metadata, idempotency keys, and dead-letter state. A workflow engine can be attached at the dispatcher boundary without coupling it to the financial-crime domain.
+The run request and its workflow intent are stored in one database transaction. Leasing, bounded retry and dead-letter state make failure visible instead of silently losing work between PostgreSQL and an external runtime.
+
+## Implementation status
+
+Senior engineering means distinguishing implemented controls from planned integrations.
+
+| Capability | Current reference implementation | Extension boundary |
+|---|---|---|
+| Investigator | Deterministic, reproducible circular-flow detector | Model-backed agent implementing `InvestigatorAgent` |
+| Graph | Case-local multi-hop traversal with evidence-backed edges | OpenSPG/KAG or another graph backend |
+| Policy | OPA/Rego authorization with fail-closed client behavior | Enterprise policy bundle and identity claims |
+| Persistence | PostgreSQL 17, SQLAlchemy 2 and explicit Alembic migration | Managed PostgreSQL and encrypted backups |
+| Reliability | Transactional outbox primitives, leases, retry and dead-letter state | Temporal or another durable workflow runtime |
+| Identity | Explicit actor context; development header in the demo profile | Institution-owned OIDC/JWT validation |
+| Documents | Evidence metadata, digests and custody model | S3, malware scanning, OCR and PII redaction |
+| Experience | Production-built React workbench with deterministic fixture | Live workspace binding to the FastAPI control plane |
+
+## Quality proof
+
+These numbers come from the release workflow—not from README decoration.
+
+| Gate | Verified result | What it protects |
+|---|---:|---|
+| Backend tests | **34 passed** | Domain, API, persistence, policy and reliability behavior |
+| Branch-aware coverage | **90.76%** | Untested decision paths |
+| Grounding evaluations | **10 / 10** | Hallucinated, duplicate and cross-case citations |
+| False accepts | **0** | Unsafe proposals entering persistence |
+| Frontend tests | **6 passed** | Investigation interactions and critical states |
+| Frontend branch coverage | **91.22%** | UI decision paths |
+| OPA policy tests | **4 passed** | Authorization and four-eyes obligations |
+| Migration gate | **No drift** | ORM/schema divergence |
+| Production dependency audit | **0 vulnerabilities** | Known frontend runtime vulnerabilities |
+| Full-stack smoke | **Passed** | PostgreSQL → migration → seed → OPA → API → web → review |
+
+The CI pipeline also runs Ruff, strict MyPy, ESLint, TypeScript type checking, locked builds, Compose validation and a real HTTP investigation/review flow.
+
+[Inspect the latest workflow →](https://github.com/Runaway1457/evidencegraph-financial-crime/actions/workflows/ci.yml)
 
 ## Run the verified stack
 
-Prerequisites: Docker Engine with Compose v2.
+### Prerequisites
+
+- Docker Engine with Compose v2
+- Git
+- ports `8080` available locally
 
 ```bash
 git clone https://github.com/Runaway1457/evidencegraph-financial-crime.git
 cd evidencegraph-financial-crime
-
-docker compose -f deployment/compose.yaml up --build
+docker compose -f deployment/compose.yaml up --build web
 ```
 
-Open [http://localhost:8080](http://localhost:8080). The stack waits for PostgreSQL, applies Alembic migrations, starts OPA and the FastAPI service, then serves the optimized frontend through an unprivileged Nginx container.
-
-Verify the runtime:
+Open [http://localhost:8080](http://localhost:8080). Compose starts PostgreSQL, applies the explicit migration, loads the idempotent synthetic case, starts OPA, the FastAPI service and the hardened Nginx frontend.
 
 ```bash
+# Readiness
 curl --fail http://localhost:8080/health/ready
 
-curl --fail   -H 'Content-Type: application/json'   -H 'X-Actor-ID: analyst_1'   -d '{"title":"Project Meridian","description":"Synthetic cross-border investigation"}'   http://localhost:8080/api/v1/cases
+# Start a grounded investigation
+curl --fail --request POST \
+  --header "X-Actor-ID: analyst_1" \
+  http://localhost:8080/api/v1/cases/case_1/investigations
 ```
 
-Expected readiness response:
-
-```json
-{"status":"ready","version":"0.2.0"}
-```
-
-Run the seeded evidence-backed investigation and complete independent review:
+Use a second actor to review the returned finding:
 
 ```bash
 curl --fail --request POST \
-  -H 'X-Actor-ID: analyst_1' \
-  http://localhost:8080/api/v1/cases/case_1/investigations \
-  | tee investigation.json
-
-FINDING_ID="$(python -c 'import json; print(json.load(open("investigation.json"))[0]["id"])')"
-
-curl --fail --request POST \
-  -H 'Content-Type: application/json' \
-  -H 'X-Actor-ID: reviewer_2' \
-  -d '{"decision":"confirmed"}' \
-  "http://localhost:8080/api/v1/cases/case_1/findings/$FINDING_ID/review"
+  --header "Content-Type: application/json" \
+  --header "X-Actor-ID: reviewer_2" \
+  --data '{"decision":"confirmed"}' \
+  http://localhost:8080/api/v1/cases/case_1/findings/FINDING_ID/review
 ```
 
-Stop and remove demo data:
+The same actor cannot propose and confirm the finding.
+
+### Local engineering loop
 
 ```bash
-docker compose -f deployment/compose.yaml down --volumes
-```
-
-### Local quality loop
-
-```bash
-python -m pip install -e ".[dev]"
+make install
 make quality
-
-cd frontend
-npm ci
-npm run lint
-npm run typecheck
-npm test
-npm run build
 ```
 
-## Quality evidence
+`make quality` runs lint, formatting checks, strict typing, backend tests, grounding evaluations and frontend validation using locked dependencies.
 
-These are release-branch results, produced by GitHub Actions rather than handwritten claims.
-
-| Gate | Verified result |
-|---|---:|
-| Backend test suite | **34 passed** |
-| Backend branch-aware coverage | **90.76%** |
-| Frontend test suite | **6 passed** |
-| Frontend statements / lines | **97.92% / 97.92%** |
-| Frontend branch coverage | **91.22%** |
-| Grounding adversarial evals | **10 / 10 passed** |
-| Grounding false accepts | **0** |
-| OPA policy tests | **4 passed** |
-| Schema drift | **None** via `alembic check` |
-| Production dependency audit | **No high-severity runtime finding** |
-| Container smoke | **Seed + PostgreSQL + migration + OPA + API + web + governed review passed** |
-
-Every push gates linting, formatting, strict typing, unit/integration tests, branch coverage, adversarial grounding evals, policy tests, migration drift, locked frontend installation, dependency audit, production build, verified UI capture, Compose model validation, and full-stack smoke testing.
-
-## Evidence and AI trust model
-
-A proposed finding is accepted only when:
-
-1. its citation set is non-empty;
-2. every cited evidence ID exists inside the same case;
-3. citations contain no duplicates;
-4. confidence is bounded to `[0, 1]`;
-5. the policy engine authorizes the action;
-6. the entire agent batch validates before any write occurs;
-7. a different identity performs final review.
-
-The included deterministic investigator is a reproducible baseline, not a substitute for suspicious-activity rules or a trained detection system. The model-provider boundary is intentionally outside the source-of-truth path.
-
-## Repository map
+## Repository anatomy
 
 ```text
-backend/
-  src/evidencegraph/
-    domain/           Pure evidence, entity, relationship and finding rules
-    application/      Use cases, grounding gate and ports
-    infrastructure/   SQLAlchemy, OPA, outbox and deterministic adapters
-    api/              FastAPI control plane
-  migrations/         Versioned relational schema
-  tests/              Domain, API, persistence, security and workflow tests
-frontend/
-  src/                Typed investigation workspace and interaction tests
-policies/             Rego authorization policy and tests
-evals/                Versioned adversarial grounding cases
-deployment/           Rootless multi-stage images, Compose and Nginx
-docs/                 ADRs, threat model, cards, runbook and launch material
+evidencegraph-financial-crime/
+├── backend/
+│   ├── migrations/                 explicit relational history
+│   ├── src/evidencegraph/
+│   │   ├── domain/                 evidence, graph and review invariants
+│   │   ├── application/            use cases, ports and grounding gate
+│   │   ├── infrastructure/         PostgreSQL, OPA, outbox and adapters
+│   │   └── api/                    FastAPI transport boundary
+│   └── tests/                      unit, integration and adversarial tests
+├── frontend/                       React 19 forensic workbench
+├── policies/                       OPA/Rego decisions and policy tests
+├── evals/                          reproducible grounding dataset
+├── deployment/                     hardened containers and Compose stack
+├── docs/                           ADRs, threat model, cards and runbook
+└── .github/workflows/ci.yml        release evidence pipeline
 ```
 
 ## Security posture
 
-This repository contains synthetic data only. Containers run as non-root with read-only filesystems and `no-new-privileges`; data and control networks are internal; database schema changes run as a separate job; production policy adapters fail closed; sensitive source material is not sent to traces by design.
+Security controls are part of the architecture, not a final checklist:
 
-This is an engineering reference, not a certified AML product. Before regulated use, an institution must add its own OIDC issuer, secret manager, encrypted object storage, malware scanning, retention policy, jurisdiction-specific controls, validation datasets, model-risk approval, incident response, and legal/compliance sign-off.
+- SHA-256 evidence and custody chains;
+- append-oriented audit events;
+- composite foreign keys preventing cross-case graph and citation links;
+- OPA policy decisions scoped by action and case;
+- domain-enforced independent review;
+- atomic validation of proposal batches;
+- generic external errors without internal exception leakage;
+- non-root containers, read-only filesystems and `no-new-privileges`;
+- internal data/control networks with edge-only web exposure;
+- explicit migrations separated from API startup.
 
-See [SECURITY.md](SECURITY.md) and the [threat model](docs/threat-model.md).
+Read the [threat model](docs/threat-model.md) and [security policy](SECURITY.md) before evaluating deployment suitability.
 
 ## Engineering record
 
 | Document | Purpose |
 |---|---|
-| [Architecture](docs/architecture.md) | Boundaries, trust model and runtime profiles |
-| [ADR-0001](docs/adr/0001-evidence-first.md) | Why evidence — not model output — is authoritative |
-| [ADR-0002](docs/adr/0002-transactional-outbox.md) | Why workflow dispatch uses a transactional outbox |
+| [Architecture](docs/architecture.md) | Component boundaries and runtime decisions |
+| [ADR-0001: Evidence first](docs/adr/0001-evidence-first.md) | Why evidence—not model output—anchors truth |
+| [ADR-0002: Transactional outbox](docs/adr/0002-transactional-outbox.md) | Why run intent commits with case state |
+| [Threat model](docs/threat-model.md) | Assets, actors, trust boundaries and mitigations |
 | [Testing strategy](docs/testing-strategy.md) | Test pyramid, adversarial cases and release gates |
-| [Threat model](docs/threat-model.md) | Assets, attackers, abuse cases and mitigations |
-| [Model card](docs/model-card.md) | Intended use, safeguards and AI limitations |
-| [Data card](docs/data-card.md) | Synthetic dataset provenance and restrictions |
-| [Operations runbook](docs/runbook.md) | Recovery, degraded modes and incident procedures |
-| [Release checklist](docs/release-checklist.md) | Evidence required before publication |
-| [Launch kit](docs/launch-kit.md) | Bilingual posts, carousel and demo script |
-| [Contributing](CONTRIBUTING.md) | Quality bar and definition of done |
+| [Model card](docs/model-card.md) | Investigator behavior and known limitations |
+| [Data card](docs/data-card.md) | Synthetic dataset scope and exclusions |
+| [Runbook](docs/runbook.md) | Operational diagnosis and recovery |
+| [Release checklist](docs/release-checklist.md) | Evidence required before a release claim |
+| [Launch kit](docs/launch-kit.md) | Demo narrative and technical talking points |
 
-## Design principles
+## Design decisions worth challenging
 
-- **Evidence before inference.**
-- **Policy before side effects.**
-- **Human accountability before confirmation.**
-- **Determinism before model sophistication.**
-- **Failure visibility before happy-path polish.**
-- **Measured claims before marketing claims.**
+- **Why PostgreSQL is authoritative:** a high-risk workflow needs relational constraints and auditable transactions before it needs a specialized graph database.
+- **Why the deterministic investigator ships first:** it creates a measurable baseline for precision, recall, regression and model value.
+- **Why AI cannot persist facts directly:** model fluency is not evidence integrity.
+- **Why policy is externalized:** authorization decisions must be inspectable independently of prompts and UI state.
+- **Why four-eyes exists in the domain:** a front-end-only approval rule disappears when another client calls the API.
+
+These choices are intentionally documented so reviewers can disagree with them using code and evidence—not architecture theater.
+
+## Roadmap
+
+- [x] Evidence-first domain and relational integrity
+- [x] Multi-hop graph traversal with cited relationships
+- [x] Deterministic investigation baseline
+- [x] OPA policy boundary and independent review
+- [x] Transactional outbox primitives
+- [x] Reproducible grounding evaluation suite
+- [x] High-density forensic workbench
+- [x] Full-stack CI smoke path
+- [ ] Live workbench/API integration
+- [ ] Model-backed investigator behind the existing port
+- [ ] Production OIDC identity verification
+- [ ] Durable workflow adapter and worker runtime
+- [ ] Document ingestion, OCR, PII controls and object storage
+
+## Contributing
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). Changes to trust-sensitive behavior require tests, documentation of the affected invariant and evidence that the quality gates still pass.
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE).
-
----
+Licensed under [Apache 2.0](LICENSE).
 
 <div align="center">
 
-Built by **Gabriel** as a senior AI engineering portfolio system: applied graph reasoning, governed agents, reliable distributed workflows, security, evaluation, and product design in one reviewable repository.
+**Gabriel Borges**
+
+AI Engineering · Knowledge Systems · Decision Infrastructure
 
 </div>
